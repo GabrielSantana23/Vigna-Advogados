@@ -1,14 +1,54 @@
-# Claude Code OS — Kit Ratos de IA
+# Grupo Vigna — Claude Code OS
 
-Este repositório é o kit de boas-vindas do curso Claude Code OS.
+## O que é esse workspace
 
-Se você acabou de clonar esse repositório:
-1. Rode `/setup` pra configurar o sistema pro seu negócio (uns 5 minutos)
-2. Depois rode `/mapear` pra criar skills personalizadas pro que você faz no dia a dia
+Workspace de trabalho do Gabriel na área de Pré-vendas do Grupo Vigna. Aqui ficam as propostas comerciais, materiais do time de SDRs, relatórios de desempenho e as automações que vão dar suporte à operação comercial do grupo.
+
+**Estrutura de pastas:**
+- `_contexto/` — memória do sistema (não apagar)
+- `comercial/propostas/` — propostas comerciais em andamento e enviadas
+- `comercial/emails/` — modelos de e-mails comerciais e e-mails padrão
+- `comercial/cadencias/` — scripts e fluxos de cadência do time de SDRs
+- `equipe/sdrs/` — materiais e acompanhamento do time (Igor, Kailainy, Ana Karolayne, Michelle)
+- `equipe/treinamentos/` — conteúdo de treinamento e desenvolvimento do time
+- `relatorios/` — relatórios mensais e dashboards de desempenho
+- `automacoes/` — automações de processos internos (foco atual)
+- `dados/` — arquivos pra análise (exports de CRM, planilhas, CSVs)
+- `tarefas.md` — lista de tarefas corrente
+- `templates/skills/` — templates de skills prontos pra personalizar com /mapear
+- `templates/ferramentas/catalogo.md` — APIs e ferramentas disponíveis pra usar em skills
+
+## Sobre o negócio
+
+O Grupo Vigna é um ecossistema jurídico e empresarial com mais de 20 anos de mercado e atuação nacional, formado por quatro empresas complementares: Vigna Advogados Associados (escritório full-service, 20+ áreas do direito), VignaTax (consultoria tributária e fiscal), Compliance Control (GRC, LGPD, due diligence, ESG) e Legal Control (tecnologia jurídica em nuvem).
+
+## O que mais fazemos aqui
+
+- Reporte de números e resultados pra diretoria
+- Gestão e engajamento do time de SDRs
+- Controle de CRM (qualidade de preenchimento e cadência)
+- Controle de ponto eletrônico do time
+- Elaboração de e-mails comerciais e e-mails padrão
+- Relatórios mensais e dashboards de desempenho
+- Geração e envio de propostas comerciais
+- Treinamento e desenvolvimento do time
+- Formalização de processos e comunicações internas
+
+## Clientes e contexto
+
+Atende leads e clientes externos das quatro empresas do grupo (com abordagem cross-sell — um mesmo lead pode ser trabalhado pra mais de uma empresa) e produz comunicações e documentos internos pra equipe e diretoria.
+
+**Equipe:** Gabriel lidera 4 SDRs — Igor Souza, Kailainy, Ana Karolayne e Michelle — e reporta à Dra. Pamela Pedro (Diretora Comercial).
+
+## Tom de voz
+
+Formal mas humano, direto, caloroso, sem excesso de cerimônia. Português brasileiro, parágrafos curtos, prefere texto corrido a listas fragmentadas quando o conteúdo permite. Ver `_contexto/preferencias.md` pra detalhes.
+
+## Ferramentas conectadas
+
+Agendor (CRM), Econodata (geração de listas de leads), Canva (propostas comerciais), Autentique (assinatura de contratos), Legal Control (gestão jurídica), GoTo (ligações), WhatsApp, Outlook.
 
 ---
-
-<!-- Este arquivo será atualizado pelo /setup com o contexto do seu negócio. -->
 
 ## Contexto do negócio
 
