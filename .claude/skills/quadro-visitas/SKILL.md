@@ -3,8 +3,9 @@ name: quadro-visitas
 description: >
   Gera o Quadro de Visitas diário do Grupo Vigna em Excel (.xlsx), compacto e pronto
   para envio por e-mail, com as reuniões do dia agrupadas por Unidade e ordenadas por
-  horário. Use quando o usuário pedir "quadro de visitas", "planilha de visitas do dia",
-  "agenda do dia em planilha" ou colar a lista de reuniões/agenda do dia.
+  horário. Busca as reuniões direto do Agendor (CRM). Use quando o usuário pedir
+  "quadro de visitas", "planilha de visitas do dia", "agenda do dia em planilha", ou
+  pedir pra gerar o quadro de uma data específica.
 ---
 
 # /quadro-visitas — Quadro de Visitas Grupo Vigna
@@ -135,15 +136,70 @@ Se a lista acima não for suficiente pra classificar uma empresa, usar o melhor 
 
 ## Fluxo de execução
 
-1. **Extrair dados** das reuniões a partir do texto/tabela que o usuário colar (empresa, horário, contato, cargo, consultor responsável)
-2. **Pesquisar CNPJ e regime tributário** de cada empresa em fontes públicas (WebSearch/WebFetch). Se não localizar: `"Não localizado"` — nunca inventar
-3. **Definir a unidade** de cada empresa via cidade da matriz, usando a tabela de regra de unidade acima
-4. **Ordenar** por unidade (ALPHAVILLE → CAMPINAS → MG → PR → RS → MATRIZ) e depois por horário crescente
-5. **Selecionar até 2 oportunidades** por empresa com base no cargo do contato, usando a matriz de priorização
-6. **Montar o JSON de dados** no formato esperado pelo gerador (ver abaixo)
-7. **Gerar o arquivo `.xlsx`** rodando o script Node, seguindo todas as especificações de formatação acima
-8. Salvar em `relatorios/quadro-visitas/Quadro_Visitas_Vigna_DDMMAAAA.xlsx`
-9. Confirmar pro usuário que o arquivo foi gerado e onde está salvo
+1. **Buscar as reuniões do dia no Agendor** rodando `buscar-agendor.js` (ver seção "Busca no Agendor" abaixo). Se o usuário colar manualmente uma lista de reuniões (sem Agendor), pular esse passo e extrair os dados do texto colado
+2. **Filtrar reuniões inválidas pro dia** — o `dueDate` da tarefa nem sempre é a data real da reunião. Pra cada item, checar o campo `Data:` dentro do `texto`:
+   - Se o `texto` contiver `DECLINADA`, `CANCELADA`, `CANCELOU` ou equivalente → **excluir** a linha
+   - Se o campo `Data:` do texto existir e for **diferente** da data pedida (dia/mês, ano pode estar ausente) → **excluir** a linha (é relatório de uma reunião de outro dia)
+   - Se o `texto` não tiver campo `Data:` mas mencionar a data pedida em outro lugar (ex: "para dia 10/06") → manter
+3. **Para cada reunião válida**, extrair do campo `texto` (relatório/agenda da reunião, formato livre):
+   - **Horário** — campo "Hora:" (normalizar pra `HH:MM`)
+   - **Pessoa de contato e cargo** — campo "Reunião: com [Nome] - [Cargo]". Se não tiver no texto, usar `contatoPrincipal` retornado pelo Agendor
+   - **Consultor(es) Vigna** — campo "Participação:" (separar por `/` se mais de um nome)
+   - **Pauta** — campo "Pauta:" (resumir se for muito longo)
+   - **Link/Local** — campo "Local:" (ex: "Microsoft Teams", "Google Meet", link direto se houver)
+4. **CNPJ** já vem do Agendor (`cnpj`, formatar como `00.000.000/0001-00`). Razão social = `razaoSocial` (fallback: `nomeFantasia`)
+5. **Regime tributário** vem do campo personalizado `regimeTributario` do Agendor (já incluído no JSON pelo `buscar-agendor.js`, via `?withCustomFields=true`). Se vier `null` (campo vazio no cadastro), pesquisar em fontes públicas (WebSearch/WebFetch) usando o CNPJ. Se ainda assim não localizar: `"Não localizado"` — nunca inventar
+6. **Definir a unidade** de cada empresa a partir de `endereco.cidade`/`endereco.estado` (cidade da matriz), usando a tabela de regra de unidade acima
+7. **Ordenar** por unidade (ALPHAVILLE → CAMPINAS → MG → PR → RS → MATRIZ) e depois por horário crescente
+8. **Selecionar até 2 oportunidades** por empresa com base no cargo do contato e na pauta, usando a matriz de priorização
+9. **Montar o JSON de dados** no formato esperado pelo gerador (ver "Geração do arquivo" abaixo)
+10. **Gerar o arquivo `.xlsx`** rodando o script Node, seguindo todas as especificações de formatação acima
+11. Salvar em `relatorios/quadro-visitas/Quadro_Visitas_Vigna_DDMMAAAA.xlsx`
+12. **Apagar os arquivos temporários** (`agendor-DDMMAAAA.json` e `dados-DDMMAAAA.json`) depois de gerar o Excel
+13. Confirmar pro usuário que o arquivo foi gerado e onde está salvo
+
+---
+
+## Busca no Agendor
+
+O Agendor guarda as reuniões como **tarefas do tipo "Reunião"**, com vencimento (`dueDate`) na data da reunião. O script `buscar-agendor.js` busca todas essas tarefas pra uma data, e pra cada uma resolve a organização (CNPJ, razão social, endereço) e o contato principal.
+
+**Token:** o token de API fica em `.env` na raiz do projeto, na variável `AGENDOR_API_TOKEN`. Não expor esse valor em nenhum output.
+
+### Como rodar
+
+```bash
+cd .claude/skills/quadro-visitas/scripts
+node --env-file=../../../../.env buscar-agendor.js DD/MM/AAAA agendor-DDMMAAAA.json
+```
+
+Saída (`agendor-DDMMAAAA.json`):
+
+```json
+{
+  "data": "AAAA-MM-DD",
+  "reunioes": [
+    {
+      "taskId": 123,
+      "tipo": "Reunião",
+      "texto": "texto livre do relatório/agenda da reunião",
+      "dueDate": "AAAA-MM-DDTHH:MM:SS.000Z",
+      "consultorResponsavel": "Nome do consultor - Unidade",
+      "organizationId": 456,
+      "nomeFantasia": "Nome Fantasia",
+      "razaoSocial": "RAZÃO SOCIAL LTDA",
+      "cnpj": "00000000000100",
+      "endereco": { "cidade": "Cidade", "estado": "UF" },
+      "regimeTributario": "SIMPLES NACIONAL | LUCRO PRESUMIDO | LUCRO REAL | null",
+      "contatoPrincipal": { "nome": "Nome", "cargo": "Cargo" }
+    }
+  ]
+}
+```
+
+Cada item de `reunioes` corresponde a uma linha do Quadro de Visitas (após o enriquecimento dos passos 2-7 acima).
+
+**Importante:** o script já filtra só tarefas do tipo "Reunião" (não inclui "Visita", "Ligação" etc) e com vencimento exatamente na data pedida.
 
 ---
 
@@ -198,7 +254,8 @@ node gerar.js dados-DDMMAAAA.json ../../../../relatorios/quadro-visitas/Quadro_V
 
 ## Confiabilidade
 
-- Usar apenas informações públicas verificáveis (CNPJ, razão social, regime tributário)
-- Se CNPJ ou regime não localizado: `"Não localizado"`
+- CNPJ, razão social e regime tributário vêm direto do Agendor — não inventar nem pesquisar se já vierem preenchidos
+- Pesquisar regime tributário em fontes públicas (WebSearch/WebFetch) apenas se vier `null` do Agendor. Se ainda assim não localizar: `"Não localizado"`
 - Nunca inventar dados financeiros, filiais ou estrutura societária
-- Se faltar algum dado da reunião (consultor, cargo, etc), deixar em branco — não inventar
+- Se faltar algum dado da reunião (consultor, cargo, pauta, link etc), deixar `"Não informado"` — não inventar
+- Nunca expor o conteúdo de `AGENDOR_API_TOKEN` em outputs, mensagens ou arquivos versionados
