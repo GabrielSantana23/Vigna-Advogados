@@ -27,6 +27,7 @@
 
 ## Contexto adicional
 
+- Meta mensal individual de cada SDR (qualquer unidade): 60 reuniões agendadas e 32 realizadas.
 - Abordagem cross-sell: um mesmo lead pode ser trabalhado pra mais de uma empresa do grupo.
 - Valores nunca aparecem em e-mails de proposta — discussão financeira fica reservada pra conversa.
 - E-mails devem ser formatados em markdown.
