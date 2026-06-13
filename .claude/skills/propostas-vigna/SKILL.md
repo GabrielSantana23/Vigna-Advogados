@@ -144,6 +144,10 @@ Após a busca automática, pergunte somente:
   sempre `PRT_`, independente da empresa do Grupo Vigna.
 - **Nome do contato (Att.)** — se não mencionado no relatório
 - A data é sempre a data atual, salvo indicação contrária
+- **Número de colaboradores/vidas/usuários** — obrigatório para propostas de sistemas/plataformas
+  (Legal Control: NR-1+, Legal Ética, Legal Training, Legal Audit; e demais propostas da
+  Compliance Control com cobrança por vida/usuário). Esse número alimenta a tabela de condições
+  comerciais (ex: página de "Proposta para X vidas"). Se não estiver no relatório, perguntar.
 
 ### Passo 4 — Formatar dados do lead
 
