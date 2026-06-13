@@ -95,6 +95,15 @@ Unidade=14 | Horário=8 | Razão Social=34 | CNPJ=20 | Pessoa=16 | Cargo=14 | Co
 - Serviços possíveis: Vigna Advogados, VignaTax, Compliance Control, Legal Control
 - Priorizar pela persona do contato (cargo), conforme a matriz abaixo
 
+### Linhas adicionais (sempre incluir)
+
+Abaixo das oportunidades, na mesma célula, sempre incluir mais duas linhas:
+
+- `Pauta: [resumo curto da pauta da reunião]`
+- `Link: [link da reunião — Teams/Meet/Zoom, se houver]`
+
+Se o link não foi informado, usar `Link: Não informado`.
+
 ### Matriz de priorização por cargo
 
 | Cargo | Prioridades |
@@ -164,7 +173,9 @@ O gerador está em `.claude/skills/quadro-visitas/scripts/gerar.js` e já implem
       "oportunidades": [
         "① Título curto (Serviço Vigna)",
         "② Título curto (Serviço Vigna)"
-      ]
+      ],
+      "pauta": "Resumo curto da pauta da reunião",
+      "link": "Link da reunião (Teams/Meet/Zoom) ou 'Não informado'"
     }
   ]
 }

@@ -29,6 +29,13 @@ const UNIDADE_CORES = {
 const COL_WIDTHS = [14, 8, 34, 20, 16, 14, 28, 14, 64];
 const N_COLS = COL_WIDTHS.length;
 
+function montarOportunidades(item) {
+  const linhas = Array.isArray(item.oportunidades) ? [...item.oportunidades] : [item.oportunidades];
+  linhas.push(`Pauta: ${item.pauta || "Não informada"}`);
+  linhas.push(`Link: ${item.link || "Não informado"}`);
+  return linhas.join("\n");
+}
+
 const thinBorder = {
   top: { style: "thin", color: { argb: BORDA } },
   bottom: { style: "thin", color: { argb: BORDA } },
@@ -102,7 +109,7 @@ linhas.forEach((item, idx) => {
     item.cargo,
     item.consultor,
     item.regime,
-    Array.isArray(item.oportunidades) ? item.oportunidades.join("\n") : item.oportunidades,
+    montarOportunidades(item),
   ];
 
   valores.forEach((valor, col) => {
