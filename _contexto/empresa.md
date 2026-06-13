@@ -28,6 +28,7 @@
 ## Contexto adicional
 
 - Meta mensal individual de cada SDR (qualquer unidade): 60 reuniões agendadas e 32 realizadas.
+- Taxa de conversão ideal do SDR: ligação → reunião agendada = 50%; agendada → reunião realizada = 50%. Pra bater 3 reuniões realizadas por dia, a referência é de pelo menos 40 ligações efetivas no dia — o gargalo normalmente é volume de ligações. Usar como benchmark ao avaliar desempenho das equipes.
 - Abordagem cross-sell: um mesmo lead pode ser trabalhado pra mais de uma empresa do grupo.
 - Valores nunca aparecem em e-mails de proposta — discussão financeira fica reservada pra conversa.
 - E-mails devem ser formatados em markdown.
