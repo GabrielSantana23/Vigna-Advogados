@@ -131,121 +131,57 @@ Se a lista acima não for suficiente pra classificar uma empresa, usar o melhor 
 3. **Definir a unidade** de cada empresa via cidade da matriz, usando a tabela de regra de unidade acima
 4. **Ordenar** por unidade (ALPHAVILLE → CAMPINAS → MG → PR → RS → MATRIZ) e depois por horário crescente
 5. **Selecionar até 2 oportunidades** por empresa com base no cargo do contato, usando a matriz de priorização
-6. **Gerar o arquivo `.xlsx`** com openpyxl, seguindo todas as especificações de formatação acima
-7. Salvar em `relatorios/quadro-visitas/Quadro_Visitas_Vigna_DDMMAAAA.xlsx`
-8. Confirmar pro usuário que o arquivo foi gerado e onde está salvo
+6. **Montar o JSON de dados** no formato esperado pelo gerador (ver abaixo)
+7. **Gerar o arquivo `.xlsx`** rodando o script Node, seguindo todas as especificações de formatação acima
+8. Salvar em `relatorios/quadro-visitas/Quadro_Visitas_Vigna_DDMMAAAA.xlsx`
+9. Confirmar pro usuário que o arquivo foi gerado e onde está salvo
 
 ---
 
-## Template de código Python (openpyxl)
+## Geração do arquivo (Node.js + exceljs)
 
-Usar como base — adaptar com os dados extraídos do dia:
+Essa máquina não tem Python instalado, então a geração do `.xlsx` é feita com Node.js (já disponível) e a lib `exceljs` (já instalada em `scripts/node_modules`).
 
-```python
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-from datetime import datetime
+O gerador está em `.claude/skills/quadro-visitas/scripts/gerar.js` e já implementa toda a formatação visual descrita acima (cores por unidade, faixa de título, cabeçalho, alternância de linhas, bordas, freeze panes, rodapé etc).
 
-wb = Workbook()
-ws = wb.active
-ws.title = "Quadro de Visitas"
-ws.sheet_view.showGridLines = False
-ws.sheet_view.zoomScale = 95
+### Passo a passo
 
-# Paleta
-AZUL_ESCURO = "1B2A4A"
-BRANCO = "FFFFFF"
-BORDA = "D8DFF0"
-UNIDADE_CORES = {
-    "ALPHAVILLE": "4A235A", "CAMPINAS": "1A3A6A",
-    "MG": "1A5C3A", "PR": "7A3B00", "RS": "8B1A1A", "MATRIZ": "1B2A4A",
+1. Montar um JSON com os dados do dia, no formato:
+
+```json
+{
+  "data": "DD/MM/AAAA",
+  "linhas": [
+    {
+      "unidade": "MATRIZ",
+      "horario": "14:00",
+      "razao": "RAZÃO SOCIAL DA EMPRESA",
+      "cnpj": "00.000.000/0001-00",
+      "pessoa": "Nome do Contato",
+      "cargo": "Cargo do Contato",
+      "consultor": "Nome do Consultor / Outro Consultor",
+      "regime": "Regime tributário ou 'Não localizado'",
+      "oportunidades": [
+        "① Título curto (Serviço Vigna)",
+        "② Título curto (Serviço Vigna)"
+      ]
+    }
+  ]
 }
-ORDEM_UNIDADES = ["ALPHAVILLE", "CAMPINAS", "MG", "PR", "RS", "MATRIZ"]
-
-thin = Side(border_style="thin", color=BORDA)
-borda = Border(left=thin, right=thin, top=thin, bottom=thin)
-
-# Larguras
-col_widths = [14, 8, 34, 20, 16, 14, 28, 14, 64]
-for i, w in enumerate(col_widths, 1):
-    ws.column_dimensions[get_column_letter(i)].width = w
-
-n_cols = len(col_widths)
-
-# Linha 2 — título
-ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n_cols)
-data_str = datetime.now().strftime("%d/%m/%Y")  # usar a data das reuniões, não a data de hoje
-titulo = ws.cell(row=2, column=1, value=f"GRUPO VIGNA  ·  QUADRO DE VISITAS  ·  {data_str}")
-titulo.font = Font(name="Georgia", size=12, bold=True, color=BRANCO)
-titulo.fill = PatternFill("solid", fgColor=AZUL_ESCURO)
-titulo.alignment = Alignment(horizontal="center", vertical="center")
-ws.row_dimensions[2].height = 28
-
-# Linha 3 — subtítulo
-ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=n_cols)
-sub = ws.cell(row=3, column=1, value="Reuniões agendadas para o dia, por unidade e horário")
-sub.font = Font(name="Arial", size=9, color="A9B6D6")
-sub.fill = PatternFill("solid", fgColor="131F38")
-sub.alignment = Alignment(horizontal="center", vertical="center")
-ws.row_dimensions[3].height = 20
-
-# Linha 5 — cabeçalho
-labels = ["UNIDADE", "HORÁRIO", "RAZÃO SOCIAL", "CNPJ", "CONTATO",
-          "CARGO", "CONSULTOR VIGNA", "REGIME", "OPORTUNIDADES PRIORITÁRIAS"]
-for i, label in enumerate(labels, 1):
-    c = ws.cell(row=5, column=i, value=label)
-    c.font = Font(name="Arial", size=8.5, bold=True, color=BRANCO)
-    c.fill = PatternFill("solid", fgColor=AZUL_ESCURO)
-    c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    c.border = borda
-ws.row_dimensions[5].height = 24
-
-# Dados — `linhas` é uma lista de dicts já ordenada por unidade > horário
-# cada dict: unidade, horario, razao, cnpj, pessoa, cargo, consultor, regime, oportunidades (string com \n)
-linha_atual = 6
-for idx, item in enumerate(linhas):
-    fundo = "EAF0FB" if idx % 2 == 0 else "F5F6FA"
-    valores = [item["unidade"], item["horario"], item["razao"], item["cnpj"],
-               item["pessoa"], item["cargo"], item["consultor"], item["regime"],
-               item["oportunidades"]]
-    for col, valor in enumerate(valores, 1):
-        c = ws.cell(row=linha_atual, column=col, value=valor)
-        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        c.border = borda
-        if col == 3:  # Razão Social
-            c.font = Font(name="Arial", size=8.5, bold=True)
-            c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-        elif col == 2:  # Horário
-            c.font = Font(name="Arial", size=8.5, bold=True)
-        elif col == 9:  # Oportunidades
-            c.font = Font(name="Arial", size=8)
-            c.fill = PatternFill("solid", fgColor="FAFBFF")
-            c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-        else:
-            c.font = Font(name="Arial", size=8.5)
-        if col == 1:  # Unidade
-            c.fill = PatternFill("solid", fgColor=UNIDADE_CORES.get(item["unidade"], AZUL_ESCURO))
-            c.font = Font(name="Arial", size=8.5, bold=True, color=BRANCO)
-        elif col != 9:
-            c.fill = PatternFill("solid", fgColor=fundo)
-    ws.row_dimensions[linha_atual].height = 38
-    linha_atual += 1
-
-# Rodapé
-ws.merge_cells(start_row=linha_atual + 1, start_column=1, end_row=linha_atual + 1, end_column=n_cols)
-rodape = ws.cell(row=linha_atual + 1, column=1,
-                  value=f"Documento confidencial · Uso interno · Grupo Vigna © {datetime.now().year}")
-rodape.font = Font(name="Arial", size=7.5, italic=True, color="8899BB")
-rodape.fill = PatternFill("solid", fgColor="F0F3FA")
-rodape.alignment = Alignment(horizontal="center", vertical="center")
-
-ws.freeze_panes = "A6"
-
-# Nome do arquivo usa a data DAS REUNIÕES (não necessariamente hoje)
-nome_arquivo = f"Quadro_Visitas_Vigna_{data_str.replace('/', '')}.xlsx"
-wb.save(f"relatorios/quadro-visitas/{nome_arquivo}")
 ```
+
+`linhas` já deve estar na ordem final (unidade → horário). `unidade` deve ser um dos valores: `ALPHAVILLE`, `CAMPINAS`, `MG`, `PR`, `RS`, `MATRIZ`.
+
+2. Salvar esse JSON em um arquivo temporário (ex: `.claude/skills/quadro-visitas/scripts/dados-DDMMAAAA.json`)
+
+3. Rodar o gerador:
+
+```bash
+cd .claude/skills/quadro-visitas/scripts
+node gerar.js dados-DDMMAAAA.json ../../../../relatorios/quadro-visitas/Quadro_Visitas_Vigna_DDMMAAAA.xlsx
+```
+
+4. Apagar o JSON temporário depois de gerar o arquivo (não precisa manter histórico de dados, só o `.xlsx` final)
 
 ---
 
