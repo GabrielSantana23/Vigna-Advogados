@@ -11,7 +11,7 @@ Workspace de trabalho do Gabriel na área de Pré-vendas do Grupo Vigna. Aqui fi
 - `comercial/cadencias/` — scripts e fluxos de cadência do time de SDRs
 - `equipe/sdrs/` — materiais e acompanhamento do time (Igor, Kailainy, Ana Karolayne, Michelle): `time-geral.md` (visão geral e ranking) + um arquivo por pessoa com perfil de gestão e desempenho mensal, alimentado por `dados/Numeros time - geral.xlsx`
 - `equipe/treinamentos/` — conteúdo de treinamento e desenvolvimento do time
-- `relatorios/` — relatórios mensais e dashboards de desempenho
+- `relatorios/` — relatórios mensais e dashboards de desempenho, além das saídas diárias geradas por skills (`relatorios/quadro-visitas/`, `relatorios/briefing-reunioes/`)
 - `automacoes/` — automações de processos internos (foco atual)
 - `dados/` — arquivos pra análise (exports de CRM, planilhas, CSVs)
 - `tarefas.md` — lista de tarefas corrente
