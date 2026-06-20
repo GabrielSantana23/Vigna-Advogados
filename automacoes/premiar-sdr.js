@@ -44,11 +44,11 @@ async function agendorGet(url) {
   return res.json();
 }
 
-// Busca TODAS as tarefas num intervalo, retornando um Set de orgIds que tiveram Visita finalizada
+// Busca tarefas num intervalo (máx 20 páginas), retornando Set de orgIds com Visita finalizada
 async function coletarOrgsComVisita(dueDateGt, dueDateLt) {
   const orgs = new Set();
-  let page = 1;
-  while (true) {
+  const MAX_PAGES = 20;
+  for (let page = 1; page <= MAX_PAGES; page++) {
     const url = `${BASE}/tasks?per_page=100&page=${page}&dueDateGt=${dueDateGt}&dueDateLt=${dueDateLt}`;
     const json = await agendorGet(url);
     const dados = json.data || [];
@@ -58,7 +58,7 @@ async function coletarOrgsComVisita(dueDateGt, dueDateLt) {
       }
     }
     if (dados.length < 100) break;
-    page++;
+    await sleep(100);
   }
   return orgs;
 }
