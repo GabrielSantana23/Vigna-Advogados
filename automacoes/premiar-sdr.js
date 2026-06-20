@@ -184,11 +184,12 @@ async function lerNegociosFechados() {
 }
 
 // ─── Gerar aba de Negócios Fechados ─────────────────────────────────────────
+// Colunas: A=DATA  B=EMPRESA  C=PRODUTO/SERVIÇO  D=VALOR  E=LINK AGENDOR
 function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, corCabecalho) {
   const sheet = outWb.addWorksheet(tituloAba);
 
   // Título
-  sheet.mergeCells('A1:F1');
+  sheet.mergeCells('A1:E1');
   const tc = sheet.getCell('A1');
   tc.value     = `NEGÓCIOS FECHADOS — GRUPO VIGNA — MAIO/JUNHO 2026`;
   tc.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
@@ -197,70 +198,84 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
   sheet.getRow(1).height = 28;
   sheet.addRow([]);
 
-  sheet.getColumn(1).width = 14;
-  sheet.getColumn(2).width = 38;
-  sheet.getColumn(3).width = 28;
-  sheet.getColumn(4).width = 14;
-  sheet.getColumn(5).width = 14;
-  sheet.getColumn(6).width = 50;
+  sheet.getColumn(1).width = 14; // DATA
+  sheet.getColumn(2).width = 38; // EMPRESA
+  sheet.getColumn(3).width = 28; // PRODUTO
+  sheet.getColumn(4).width = 14; // VALOR
+  sheet.getColumn(5).width = 50; // LINK
 
   const comissoesPorSdr = {};
 
   for (const sdrName of sdrsParaMostrar) {
-    const deals = porSdr[sdrName] || [];
-    const total = deals.length;
-    const valUnit = valorUnitFechamento(total);
+    const deals        = porSdr[sdrName] || [];
+    const total        = deals.length;
+    const valUnit      = valorUnitFechamento(total);
     const totalComissao = comissaoFechamento(total);
     comissoesPorSdr[sdrName] = { total, valUnit, totalComissao };
 
     // Subheader do SDR
     const sdrRow = sheet.addRow([sdrName.toUpperCase()]);
-    sdrRow.getCell(1).font      = { bold: true, color: { argb: BRANCO }, name: 'Arial Narrow', size: 10 };
-    sdrRow.getCell(1).fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
+    sdrRow.getCell(1).font  = { bold: true, color: { argb: BRANCO }, name: 'Arial Narrow', size: 10 };
+    sdrRow.getCell(1).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
     sdrRow.height = 18;
-    sheet.mergeCells(`A${sdrRow.number}:F${sdrRow.number}`);
+    sheet.mergeCells(`A${sdrRow.number}:E${sdrRow.number}`);
 
     // Header das colunas
-    const hRow = sheet.addRow(['DATA FECHAMENTO', 'EMPRESA', 'PRODUTO / SERVIÇO', '', '', 'LINK AGENDOR']);
+    const hRow = sheet.addRow(['DATA FECHAMENTO', 'EMPRESA', 'PRODUTO / SERVIÇO', 'VALOR', 'LINK AGENDOR']);
     aplicarEstiloHeader(hRow, COR_DEALS);
 
     if (deals.length === 0) {
       const emRow = sheet.addRow(['', '(sem negócios no período)']);
       emRow.getCell(2).font = { italic: true, color: { argb: 'FF888888' } };
+      comissoesPorSdr[sdrName] = { total: 0, valUnit: 125, totalComissao: 0 };
+      sheet.addRow([]);
+      continue;
     }
+
+    const primeiraLinhaDados = sheet.rowCount + 1;
 
     for (const d of deals) {
       const link = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-      const row = sheet.addRow([d.data, d.empresa, d.produto, '', '', link]);
+      const row  = sheet.addRow([d.data, d.empresa, d.produto, valUnit, link]);
       row.eachCell(cell => {
         cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_DEAL_ROW } };
         cell.alignment = { vertical: 'middle' };
         cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
       });
       row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(4).numFmt    = 'R$ #,##0.00';
+      row.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
       row.height = 18;
     }
 
-    // Linha de resumo do SDR
-    const tier = total >= 10 ? '≥10 → R$ 250' : total >= 5 ? '≥5 → R$ 150' : `${total} → R$ 125`;
-    const resRow = sheet.addRow(['', `TOTAL: ${total} fechamento(s)`, `Faixa: ${tier}`, '', `R$ ${totalComissao.toFixed(2).replace('.', ',')}`, '']);
-    resRow.getCell(2).font      = { bold: true, name: 'Arial Narrow' };
-    resRow.getCell(3).font      = { italic: true, name: 'Arial Narrow', size: 9 };
-    resRow.getCell(5).font      = { bold: true, name: 'Arial Narrow' };
-    resRow.getCell(5).alignment = { horizontal: 'right' };
-    resRow.height = 18;
+    const ultimaLinhaDados = sheet.rowCount;
+
+    // Linha de total com SUM (igual às abas de reunião)
+    const tier    = total >= 10 ? '≥10 → R$ 250/cada' : total >= 5 ? '≥5 → R$ 150/cada' : `1–4 → R$ 125/cada`;
+    const totRow  = sheet.addRow(['', `TOTAL: ${total} fechamento(s)`, `Faixa: ${tier}`, null, '']);
+    totRow.getCell(4).value = {
+      formula: `=SUM(D${primeiraLinhaDados}:D${ultimaLinhaDados})`,
+      result:  totalComissao,
+    };
+    totRow.getCell(2).font      = { bold: true, name: 'Arial Narrow' };
+    totRow.getCell(3).font      = { italic: true, name: 'Arial Narrow', size: 9 };
+    totRow.getCell(4).numFmt    = 'R$ #,##0.00';
+    totRow.getCell(4).font      = { bold: true, name: 'Arial Narrow' };
+    totRow.getCell(4).alignment = { horizontal: 'right' };
+    totRow.height = 18;
 
     sheet.addRow([]); // espaçamento entre SDRs
   }
 
-  // Resumo geral no final
+  // Total geral no rodapé
   const gtTotal = Object.values(comissoesPorSdr).reduce((s, d) => s + d.totalComissao, 0);
   sheet.addRow([]);
-  const totRow = sheet.addRow(['', 'TOTAL GERAL DE COMISSÕES — NEGÓCIOS FECHADOS', '', '', `R$ ${gtTotal.toFixed(2).replace('.', ',')}`, '']);
-  totRow.getCell(2).font      = { bold: true, size: 11, name: 'Arial Narrow' };
-  totRow.getCell(5).font      = { bold: true, size: 11, name: 'Arial Narrow' };
-  totRow.getCell(5).alignment = { horizontal: 'right' };
-  totRow.height = 22;
+  const gtRow = sheet.addRow(['', 'TOTAL GERAL — NEGÓCIOS FECHADOS', '', gtTotal, '']);
+  gtRow.getCell(2).font      = { bold: true, size: 11, name: 'Arial Narrow' };
+  gtRow.getCell(4).numFmt    = 'R$ #,##0.00';
+  gtRow.getCell(4).font      = { bold: true, size: 11, name: 'Arial Narrow' };
+  gtRow.getCell(4).alignment = { horizontal: 'right' };
+  gtRow.height = 22;
 
   return comissoesPorSdr;
 }
@@ -373,9 +388,13 @@ async function main() {
   for (const [sdr, d] of Object.entries(comissoesFechamentos)) summaryDeals[sdr] = d;
 
   // ── Aba Igor Vasconcelos (dedicada) ──────────────────────────────────────
-  const ivDeals = negociosPorSdr['Igor Vasconcelos'] || [];
-  const ivSheet = outWb.addWorksheet('Igor Vasconcelos');
-  ivSheet.mergeCells('A1:F1');
+  const ivDeals  = negociosPorSdr['Igor Vasconcelos'] || [];
+  const ivTot    = ivDeals.length;
+  const ivValUnit = valorUnitFechamento(ivTot);
+  const ivComiss  = comissaoFechamento(ivTot);
+  const ivSheet   = outWb.addWorksheet('Igor Vasconcelos');
+
+  ivSheet.mergeCells('A1:E1');
   const ivTitle = ivSheet.getCell('A1');
   ivTitle.value     = 'IGOR VASCONCELOS — NEGÓCIOS FECHADOS — MAIO/JUNHO 2026';
   ivTitle.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
@@ -384,27 +403,40 @@ async function main() {
   ivSheet.getRow(1).height = 28;
   ivSheet.addRow([]);
   ivSheet.getColumn(1).width = 14; ivSheet.getColumn(2).width = 38;
-  ivSheet.getColumn(3).width = 28; ivSheet.getColumn(6).width = 50;
-  const ivHdr = ivSheet.addRow(['DATA FECHAMENTO', 'EMPRESA', 'PRODUTO / SERVIÇO', '', '', 'LINK AGENDOR']);
+  ivSheet.getColumn(3).width = 28; ivSheet.getColumn(4).width = 14;
+  ivSheet.getColumn(5).width = 50;
+
+  const ivHdr = ivSheet.addRow(['DATA FECHAMENTO', 'EMPRESA', 'PRODUTO / SERVIÇO', 'VALOR', 'LINK AGENDOR']);
   aplicarEstiloHeader(ivHdr, COR_DEALS);
+
+  const ivPrimeiraLinha = ivSheet.rowCount + 1;
   for (const d of ivDeals) {
     const link = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-    const row  = ivSheet.addRow([d.data, d.empresa, d.produto, '', '', link]);
+    const row  = ivSheet.addRow([d.data, d.empresa, d.produto, ivValUnit, link]);
     row.eachCell(cell => {
       cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_DEAL_ROW } };
       cell.alignment = { vertical: 'middle' };
       cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
     });
     row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(4).numFmt    = 'R$ #,##0.00';
+    row.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
     row.height = 18;
   }
+  const ivUltimaLinha = ivSheet.rowCount;
+
   ivSheet.addRow([]);
-  const ivTot    = ivDeals.length;
-  const ivComiss = comissaoFechamento(ivTot);
-  const ivTier   = `Faixa: ${ivTot} fechamento(s) → R$ ${valorUnitFechamento(ivTot)}/cada`;
-  const ivResRow = ivSheet.addRow(['', `TOTAL: ${ivTot} fechamento(s)`, ivTier, '', `R$ ${ivComiss.toFixed(2).replace('.',',')}`, '']);
-  ivResRow.getCell(2).font = { bold: true }; ivResRow.getCell(5).font = { bold: true };
-  ivResRow.getCell(5).alignment = { horizontal: 'right' };
+  const ivTier   = `Faixa: ${ivTot} fechamento(s) → R$ ${ivValUnit}/cada`;
+  const ivResRow = ivSheet.addRow(['', `TOTAL: ${ivTot} fechamento(s)`, ivTier, null, '']);
+  ivResRow.getCell(4).value = {
+    formula: `=SUM(D${ivPrimeiraLinha}:D${ivUltimaLinha})`,
+    result:  ivComiss,
+  };
+  ivResRow.getCell(2).font      = { bold: true, name: 'Arial Narrow' };
+  ivResRow.getCell(3).font      = { italic: true, name: 'Arial Narrow', size: 9 };
+  ivResRow.getCell(4).numFmt    = 'R$ #,##0.00';
+  ivResRow.getCell(4).font      = { bold: true, name: 'Arial Narrow' };
+  ivResRow.getCell(4).alignment = { horizontal: 'right' };
 
   // ── Abas individuais de reuniões por SDR ─────────────────────────────────
   for (const sdrName of SDR_ORDER) {
