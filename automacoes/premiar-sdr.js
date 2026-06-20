@@ -61,23 +61,39 @@ const FIM    = new Date('2026-06-20T02:59:59.000Z');
 const VALOR_NOVA = 7.50;
 const VALOR_FUP  = 5.00;
 
-function valorUnitFechamento(total) {
-  if (total >= 10) return 250;
-  if (total >= 5)  return 150;
-  return 125;
+// Blocos progressivos de comissão por fechamento:
+//   Contratos  1–5  → R$ 120/cada
+//   Contratos  6–10 → R$ 150/cada
+//   Contratos 11+   → R$ 180/cada
+function valorUnitPorPosicao(posicao) {
+  if (posicao <= 5)  return 120;
+  if (posicao <= 10) return 150;
+  return 180;
 }
+
+// Cálculo total com blocos progressivos
 function comissaoFechamento(total) {
-  return total * valorUnitFechamento(total);
+  const t1 = Math.min(total, 5)              * 120; // bloco 1–5
+  const t2 = Math.max(0, Math.min(total-5, 5)) * 150; // bloco 6–10
+  const t3 = Math.max(0, total - 10)          * 180; // bloco 11+
+  return t1 + t2 + t3;
+}
+
+// Cor de fundo por faixa (para visualização por tier)
+function corFaixaFechamento(posicao) {
+  if (posicao <= 5)  return 'FFD6EBCD'; // verde claro  — R$120
+  if (posicao <= 10) return 'FFFFF0CC'; // amarelo claro — R$150
+  return 'FFFFD9B3';                    // laranja claro — R$180
 }
 
 // ─── Cores ────────────────────────────────────────────────────────────────────
 const COR_HEADER   = 'FF1B2A4A';
 const COR_EQUIPE_G = 'FF1B2A4A';
 const COR_EQUIPE_P = 'FF2E4A7A';
-const COR_DEALS    = 'FF1A4A2E'; // verde escuro para negócios fechados
+const COR_DEALS    = 'FF1A4A2E'; // verde escuro — negócios fechados
 const COR_NOVA     = 'FFD6E4F7';
 const COR_FUP      = 'FFFFF3CD';
-const COR_DEAL_ROW = 'FFE6F4EA'; // verde claro para linhas de deals
+// Cores por faixa de fechamento (definidas em corFaixaFechamento())
 const BRANCO       = 'FFFFFFFF';
 
 // ─── Helpers API ──────────────────────────────────────────────────────────────
@@ -185,33 +201,48 @@ async function lerNegociosFechados() {
 
 // ─── Gerar aba de Negócios Fechados ─────────────────────────────────────────
 // Colunas: A=DATA  B=EMPRESA  C=PRODUTO/SERVIÇO  D=VALOR  E=LINK AGENDOR
+//
+// VALOR usa fórmula por posição dentro do bloco de cada SDR:
+//   =IF(posição<=5, 120, IF(posição<=10, 150, 180))
+// Cor de fundo por faixa: verde=R$120 | amarelo=R$150 | laranja=R$180
 function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, corCabecalho) {
   const sheet = outWb.addWorksheet(tituloAba);
 
   // Título
   sheet.mergeCells('A1:E1');
   const tc = sheet.getCell('A1');
-  tc.value     = `NEGÓCIOS FECHADOS — GRUPO VIGNA — MAIO/JUNHO 2026`;
+  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — MAIO/JUNHO 2026';
   tc.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
   tc.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
   tc.alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getRow(1).height = 28;
+
+  // Legenda de faixas (logo abaixo do título)
+  sheet.addRow([]);
+  const legRow = sheet.addRow([
+    '⬛ 1–5 contratos: R$ 120/cada',
+    '⬛ 6–10 contratos: R$ 150/cada',
+    '⬛ 11+ contratos: R$ 180/cada',
+  ]);
+  legRow.getCell(1).font = { bold: true, size: 9, color: { argb: 'FF2E6B30' } };
+  legRow.getCell(2).font = { bold: true, size: 9, color: { argb: 'FF7A6000' } };
+  legRow.getCell(3).font = { bold: true, size: 9, color: { argb: 'FF8B3A00' } };
+  legRow.height = 14;
   sheet.addRow([]);
 
-  sheet.getColumn(1).width = 14; // DATA
-  sheet.getColumn(2).width = 38; // EMPRESA
-  sheet.getColumn(3).width = 28; // PRODUTO
-  sheet.getColumn(4).width = 14; // VALOR
-  sheet.getColumn(5).width = 50; // LINK
+  sheet.getColumn(1).width = 14;
+  sheet.getColumn(2).width = 40;
+  sheet.getColumn(3).width = 28;
+  sheet.getColumn(4).width = 14;
+  sheet.getColumn(5).width = 50;
 
   const comissoesPorSdr = {};
 
   for (const sdrName of sdrsParaMostrar) {
-    const deals        = porSdr[sdrName] || [];
-    const total        = deals.length;
-    const valUnit      = valorUnitFechamento(total);
+    const deals         = porSdr[sdrName] || [];
+    const total         = deals.length;
     const totalComissao = comissaoFechamento(total);
-    comissoesPorSdr[sdrName] = { total, valUnit, totalComissao };
+    comissoesPorSdr[sdrName] = { total, totalComissao };
 
     // Subheader do SDR
     const sdrRow = sheet.addRow([sdrName.toUpperCase()]);
@@ -227,18 +258,31 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
     if (deals.length === 0) {
       const emRow = sheet.addRow(['', '(sem negócios no período)']);
       emRow.getCell(2).font = { italic: true, color: { argb: 'FF888888' } };
-      comissoesPorSdr[sdrName] = { total: 0, valUnit: 125, totalComissao: 0 };
       sheet.addRow([]);
       continue;
     }
 
-    const primeiraLinhaDados = sheet.rowCount + 1;
+    const primeiraLinha = sheet.rowCount + 1;
 
-    for (const d of deals) {
-      const link = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-      const row  = sheet.addRow([d.data, d.empresa, d.produto, valUnit, link]);
+    deals.forEach((d, idx) => {
+      const posicao   = idx + 1;                                    // 1-based
+      const valorUnit = valorUnitPorPosicao(posicao);              // para resultado pré-calculado
+      const link      = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
+
+      // Fórmula: posição = ROW() - primeiraLinha + 1
+      // =IF(posição<=5, 120, IF(posição<=10, 150, 180))
+      const linhaAtual = primeiraLinha + idx;
+      const formulaPos = `ROW()-${primeiraLinha}+1`;
+
+      const row = sheet.addRow([d.data, d.empresa, d.produto, null, link]);
+      row.getCell(4).value = {
+        formula: `=IF(${formulaPos}<=5,120,IF(${formulaPos}<=10,150,180))`,
+        result:  valorUnit,
+      };
+
+      const bg = corFaixaFechamento(posicao);
       row.eachCell(cell => {
-        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_DEAL_ROW } };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
         cell.alignment = { vertical: 'middle' };
         cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
       });
@@ -246,19 +290,17 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
       row.getCell(4).numFmt    = 'R$ #,##0.00';
       row.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
       row.height = 18;
-    }
+    });
 
-    const ultimaLinhaDados = sheet.rowCount;
+    const ultimaLinha = sheet.rowCount;
 
-    // Linha de total com SUM (igual às abas de reunião)
-    const tier    = total >= 10 ? '≥10 → R$ 250/cada' : total >= 5 ? '≥5 → R$ 150/cada' : `1–4 → R$ 125/cada`;
-    const totRow  = sheet.addRow(['', `TOTAL: ${total} fechamento(s)`, `Faixa: ${tier}`, null, '']);
+    // Linha de total com SUM
+    const totRow = sheet.addRow(['', `TOTAL: ${total} fechamento(s)`, '', null, '']);
     totRow.getCell(4).value = {
-      formula: `=SUM(D${primeiraLinhaDados}:D${ultimaLinhaDados})`,
+      formula: `=SUM(D${primeiraLinha}:D${ultimaLinha})`,
       result:  totalComissao,
     };
     totRow.getCell(2).font      = { bold: true, name: 'Arial Narrow' };
-    totRow.getCell(3).font      = { italic: true, name: 'Arial Narrow', size: 9 };
     totRow.getCell(4).numFmt    = 'R$ #,##0.00';
     totRow.getCell(4).font      = { bold: true, name: 'Arial Narrow' };
     totRow.getCell(4).alignment = { horizontal: 'right' };
@@ -267,7 +309,7 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
     sheet.addRow([]); // espaçamento entre SDRs
   }
 
-  // Total geral no rodapé
+  // Total geral
   const gtTotal = Object.values(comissoesPorSdr).reduce((s, d) => s + d.totalComissao, 0);
   sheet.addRow([]);
   const gtRow = sheet.addRow(['', 'TOTAL GERAL — NEGÓCIOS FECHADOS', '', gtTotal, '']);
@@ -370,7 +412,7 @@ async function main() {
   console.log('\nLendo negócios fechados...');
   const negociosPorSdr = await lerNegociosFechados();
   for (const [sdr, deals] of Object.entries(negociosPorSdr)) {
-    console.log(`  ${sdr}: ${deals.length} fechamento(s) → R$ ${comissaoFechamento(deals.length).toFixed(2).replace('.',',')} (R$${valorUnitFechamento(deals.length)}/cada)`);
+    console.log(`  ${sdr}: ${deals.length} fechamento(s) → R$ ${comissaoFechamento(deals.length).toFixed(2).replace('.',',')} (blocos R$120/150/180)`);
   }
 
   // ── 5. Gerar Excel ────────────────────────────────────────────────────────
@@ -390,9 +432,8 @@ async function main() {
   // ── Aba Igor Vasconcelos (dedicada) ──────────────────────────────────────
   const ivDeals  = negociosPorSdr['Igor Vasconcelos'] || [];
   const ivTot    = ivDeals.length;
-  const ivValUnit = valorUnitFechamento(ivTot);
-  const ivComiss  = comissaoFechamento(ivTot);
-  const ivSheet   = outWb.addWorksheet('Igor Vasconcelos');
+  const ivComiss = comissaoFechamento(ivTot);
+  const ivSheet  = outWb.addWorksheet('Igor Vasconcelos');
 
   ivSheet.mergeCells('A1:E1');
   const ivTitle = ivSheet.getCell('A1');
@@ -402,7 +443,13 @@ async function main() {
   ivTitle.alignment = { horizontal: 'center', vertical: 'middle' };
   ivSheet.getRow(1).height = 28;
   ivSheet.addRow([]);
-  ivSheet.getColumn(1).width = 14; ivSheet.getColumn(2).width = 38;
+  const ivLeg = ivSheet.addRow(['⬛ 1–5: R$120/cada', '⬛ 6–10: R$150/cada', '⬛ 11+: R$180/cada']);
+  ivLeg.getCell(1).font = { bold: true, size: 9, color: { argb: 'FF2E6B30' } };
+  ivLeg.getCell(2).font = { bold: true, size: 9, color: { argb: 'FF7A6000' } };
+  ivLeg.getCell(3).font = { bold: true, size: 9, color: { argb: 'FF8B3A00' } };
+  ivLeg.height = 14;
+  ivSheet.addRow([]);
+  ivSheet.getColumn(1).width = 14; ivSheet.getColumn(2).width = 40;
   ivSheet.getColumn(3).width = 28; ivSheet.getColumn(4).width = 14;
   ivSheet.getColumn(5).width = 50;
 
@@ -410,11 +457,19 @@ async function main() {
   aplicarEstiloHeader(ivHdr, COR_DEALS);
 
   const ivPrimeiraLinha = ivSheet.rowCount + 1;
-  for (const d of ivDeals) {
-    const link = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-    const row  = ivSheet.addRow([d.data, d.empresa, d.produto, ivValUnit, link]);
+  ivDeals.forEach((d, idx) => {
+    const posicao   = idx + 1;
+    const valorUnit = valorUnitPorPosicao(posicao);
+    const link      = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
+    const formulaPos = `ROW()-${ivPrimeiraLinha}+1`;
+    const row = ivSheet.addRow([d.data, d.empresa, d.produto, null, link]);
+    row.getCell(4).value = {
+      formula: `=IF(${formulaPos}<=5,120,IF(${formulaPos}<=10,150,180))`,
+      result:  valorUnit,
+    };
+    const bg = corFaixaFechamento(posicao);
     row.eachCell(cell => {
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_DEAL_ROW } };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
       cell.alignment = { vertical: 'middle' };
       cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
     });
@@ -422,18 +477,16 @@ async function main() {
     row.getCell(4).numFmt    = 'R$ #,##0.00';
     row.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
     row.height = 18;
-  }
+  });
   const ivUltimaLinha = ivSheet.rowCount;
 
   ivSheet.addRow([]);
-  const ivTier   = `Faixa: ${ivTot} fechamento(s) → R$ ${ivValUnit}/cada`;
-  const ivResRow = ivSheet.addRow(['', `TOTAL: ${ivTot} fechamento(s)`, ivTier, null, '']);
+  const ivResRow = ivSheet.addRow(['', `TOTAL: ${ivTot} fechamento(s)`, '', null, '']);
   ivResRow.getCell(4).value = {
     formula: `=SUM(D${ivPrimeiraLinha}:D${ivUltimaLinha})`,
     result:  ivComiss,
   };
   ivResRow.getCell(2).font      = { bold: true, name: 'Arial Narrow' };
-  ivResRow.getCell(3).font      = { italic: true, name: 'Arial Narrow', size: 9 };
   ivResRow.getCell(4).numFmt    = 'R$ #,##0.00';
   ivResRow.getCell(4).font      = { bold: true, name: 'Arial Narrow' };
   ivResRow.getCell(4).alignment = { horizontal: 'right' };
@@ -543,10 +596,10 @@ async function main() {
     let totR = 0, totF = 0, totT = 0, totCV = 0, totFV = 0;
     for (const sdrName of sdrs) {
       const m  = summaryData[sdrName]  || { novas:0, fups:0, total:0, valor:0 };
-      const fd = summaryDeals[sdrName] || { total:0, valUnit:125, totalComissao:0 };
+      const fd = summaryDeals[sdrName] || { total:0, totalComissao:0 };
       const totalGeral = m.valor + fd.totalComissao;
       const row = capa.addRow(['', sdrName, m.novas, m.fups, m.total,
-                                m.valor, fd.total, fd.valUnit, fd.totalComissao, totalGeral]);
+                                m.valor, fd.total, '(blocos)', fd.totalComissao, totalGeral]);
       row.getCell(2).font = { name: 'Arial Narrow' };
       [6, 8, 9, 10].forEach(i => { row.getCell(i).numFmt = 'R$ #,##0.00'; row.getCell(i).alignment = { horizontal: 'right' }; });
       row.getCell(7).alignment = { horizontal: 'center' };
@@ -568,7 +621,7 @@ async function main() {
 
   // Igor Vasconcelos (linha separada — só fechamentos)
   const ivComissaoR = comissaoFechamento(ivTot);
-  const ivRow = capa.addRow(['', 'Igor Vasconcelos', '', '', '', 0, ivTot, valorUnitFechamento(ivTot), ivComissaoR, ivComissaoR]);
+  const ivRow = capa.addRow(['', 'Igor Vasconcelos', '', '', '', 0, ivTot, '(blocos)', ivComissaoR, ivComissaoR]);
   ivRow.getCell(2).font = { italic: true, name: 'Arial Narrow' };
   [6, 8, 9, 10].forEach(i => { ivRow.getCell(i).numFmt = 'R$ #,##0.00'; ivRow.getCell(i).alignment = { horizontal: 'right' }; });
   ivRow.getCell(7).alignment = { horizontal: 'center' };
