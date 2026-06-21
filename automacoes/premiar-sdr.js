@@ -2,13 +2,19 @@
 // Gera a planilha de premiação: Reuniões (Equipe Gabriel + Equipe Paola) + Negócios Fechados
 // Uso: node --env-file=.env automacoes/premiar-sdr.js
 //
-// Reuniões — NOVA vs FUP via histórico Agendor (3 meses antes do período)
-//   NOVA = R$ 7,50  |  FUP = R$ 5,00  (coluna VALOR com fórmula + dropdown Excel)
+// Valores dependem de senioridade (+1 ano de casa vs <1 ano):
 //
-// Negócios Fechados — faixas de comissão por SDR:
-//   1–4 fechamentos  = R$ 125,00/cada
-//   5–9 fechamentos  = R$ 150,00/cada
-//   ≥10 fechamentos  = R$ 250,00/cada
+// JÚNIOR (<1 ano):
+//   Reunião NOVA  VC        = R$  7,50 | NOVA  Presencial = R$ 15,00
+//   Reunião FUP   VC        = R$  5,00 | FUP   Presencial = R$  7,50
+//   Fechamento               = R$100,00 (flat)
+//
+// SÊNIOR (+1 ano):
+//   Reunião NOVA  VC        = R$ 10,00 | NOVA  Presencial = R$ 25,00
+//   Reunião FUP   VC        = R$  5,00 | FUP   Presencial = R$ 10,00
+//   Fechamento               = R$120 (1–5) / R$150 (6–10) / R$180 (11+)
+//
+// SDRs sênior (+1 ano): Gabriel, Ana Beatriz, Leticia
 
 const ExcelJS = require('exceljs');
 const path    = require('path');
@@ -57,33 +63,67 @@ const NEGOCIOS_ORDER   = ['Gabriel', 'Michelle', 'Kailany', 'Ana Beatriz', 'Lawa
 const INICIO = new Date('2026-05-21T00:00:00.000Z');
 const FIM    = new Date('2026-06-20T02:59:59.000Z');
 
-// ─── Valores ─────────────────────────────────────────────────────────────────
-const VALOR_NOVA = 7.50;
-const VALOR_FUP  = 5.00;
+// ─── Senioridade ──────────────────────────────────────────────────────────────
+// SDRs com +1 ano de casa (tabela de valores diferenciada)
+const SENIOR_SDRS = new Set(['Gabriel', 'Ana Beatriz', 'Leticia']);
 
-// Blocos progressivos de comissão por fechamento:
-//   Contratos  1–5  → R$ 120/cada
-//   Contratos  6–10 → R$ 150/cada
-//   Contratos 11+   → R$ 180/cada
-function valorUnitPorPosicao(posicao) {
+// ─── Tabelas de valores por reunião ──────────────────────────────────────────
+const RATES = {
+  senior: {
+    NOVA: { 'VIDEO CONFERÊNCIA': 10.00, PRESENCIAL: 25.00 },
+    FUP:  { 'VIDEO CONFERÊNCIA':  5.00, PRESENCIAL: 10.00 },
+  },
+  junior: {
+    NOVA: { 'VIDEO CONFERÊNCIA':  7.50, PRESENCIAL: 15.00 },
+    FUP:  { 'VIDEO CONFERÊNCIA':  5.00, PRESENCIAL:  7.50 },
+  },
+};
+
+function calcularValorReuniao(tipo, modalidade, isSenior) {
+  const tabela = isSenior ? RATES.senior : RATES.junior;
+  return (tabela[tipo] || {})[modalidade] || 0;
+}
+
+// Fórmula Excel para a coluna VALOR — referencia TIPO (col D) e MODALIDADE (col E)
+function formulaValorReuniao(tipoLetra, modalLetra, linha, isSenior) {
+  const T = `${tipoLetra}${linha}`;
+  const M = `${modalLetra}${linha}`;
+  if (isSenior) {
+    return `=IF(AND(${T}="NOVA",${M}="PRESENCIAL"),25,IF(AND(${T}="FUP",${M}="PRESENCIAL"),10,IF(${T}="NOVA",10,IF(${T}="FUP",5,0))))`;
+  }
+  return `=IF(AND(${T}="NOVA",${M}="PRESENCIAL"),15,IF(AND(${T}="FUP",${M}="PRESENCIAL"),7.5,IF(${T}="NOVA",7.5,IF(${T}="FUP",5,0))))`;
+}
+
+// ─── Comissão de fechamentos ──────────────────────────────────────────────────
+// Júnior: R$100 flat  |  Sênior: blocos progressivos 120 / 150 / 180
+function valorUnitPorPosicao(posicao, isSenior) {
+  if (!isSenior) return 100;
   if (posicao <= 5)  return 120;
   if (posicao <= 10) return 150;
   return 180;
 }
 
-// Cálculo total com blocos progressivos
-function comissaoFechamento(total) {
-  const t1 = Math.min(total, 5)              * 120; // bloco 1–5
-  const t2 = Math.max(0, Math.min(total-5, 5)) * 150; // bloco 6–10
-  const t3 = Math.max(0, total - 10)          * 180; // bloco 11+
+function comissaoFechamento(total, isSenior) {
+  if (!isSenior) return total * 100;
+  const t1 = Math.min(total, 5)                * 120;
+  const t2 = Math.max(0, Math.min(total-5, 5)) * 150;
+  const t3 = Math.max(0, total - 10)           * 180;
   return t1 + t2 + t3;
 }
 
-// Cor de fundo por faixa (para visualização por tier)
-function corFaixaFechamento(posicao) {
-  if (posicao <= 5)  return 'FFD6EBCD'; // verde claro  — R$120
+// Cor de linha por faixa de fechamento
+function corFaixaFechamento(posicao, isSenior) {
+  if (!isSenior) return 'FFD6E4F7'; // azul claro — júnior R$100 flat
+  if (posicao <= 5)  return 'FFD6EBCD'; // verde claro   — R$120
   if (posicao <= 10) return 'FFFFF0CC'; // amarelo claro — R$150
   return 'FFFFD9B3';                    // laranja claro — R$180
+}
+
+// Fórmula Excel para VALOR do fechamento — usa posição relativa ao bloco do SDR
+function formulaValorFechamento(primeiraLinha, isSenior) {
+  if (!isSenior) return { formula: '=100', result: 100 };
+  const pos = `ROW()-${primeiraLinha}+1`;
+  return { formula: `=IF(${pos}<=5,120,IF(${pos}<=10,150,180))`, result: null };
 }
 
 // ─── Cores ────────────────────────────────────────────────────────────────────
@@ -217,16 +257,18 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
   tc.alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getRow(1).height = 28;
 
-  // Legenda de faixas (logo abaixo do título)
+  // Legenda de faixas
   sheet.addRow([]);
   const legRow = sheet.addRow([
-    '⬛ 1–5 contratos: R$ 120/cada',
-    '⬛ 6–10 contratos: R$ 150/cada',
-    '⬛ 11+ contratos: R$ 180/cada',
+    '🟦 Júnior (<1 ano): R$100/cada (flat)',
+    '🟩 Sênior (+1 ano): R$120 (1–5)',
+    '🟨 Sênior (+1 ano): R$150 (6–10)',
+    '🟧 Sênior (+1 ano): R$180 (11+)',
   ]);
-  legRow.getCell(1).font = { bold: true, size: 9, color: { argb: 'FF2E6B30' } };
-  legRow.getCell(2).font = { bold: true, size: 9, color: { argb: 'FF7A6000' } };
-  legRow.getCell(3).font = { bold: true, size: 9, color: { argb: 'FF8B3A00' } };
+  legRow.getCell(1).font = { bold: true, size: 9, color: { argb: 'FF1B2A4A' } };
+  legRow.getCell(2).font = { bold: true, size: 9, color: { argb: 'FF2E6B30' } };
+  legRow.getCell(3).font = { bold: true, size: 9, color: { argb: 'FF7A6000' } };
+  legRow.getCell(4).font = { bold: true, size: 9, color: { argb: 'FF8B3A00' } };
   legRow.height = 14;
   sheet.addRow([]);
 
@@ -239,17 +281,26 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
   const comissoesPorSdr = {};
 
   for (const sdrName of sdrsParaMostrar) {
+    const isSeniorSdr   = SENIOR_SDRS.has(sdrName);
     const deals         = porSdr[sdrName] || [];
     const total         = deals.length;
-    const totalComissao = comissaoFechamento(total);
+    const totalComissao = comissaoFechamento(total, isSeniorSdr);
     comissoesPorSdr[sdrName] = { total, totalComissao };
 
-    // Subheader do SDR
-    const sdrRow = sheet.addRow([sdrName.toUpperCase()]);
+    // Subheader do SDR (com nível)
+    const nivelLabel = isSeniorSdr ? '+1 ano' : '<1 ano';
+    const sdrRow = sheet.addRow([`${sdrName.toUpperCase()}  (${nivelLabel})`]);
     sdrRow.getCell(1).font  = { bold: true, color: { argb: BRANCO }, name: 'Arial Narrow', size: 10 };
     sdrRow.getCell(1).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
     sdrRow.height = 18;
     sheet.mergeCells(`A${sdrRow.number}:E${sdrRow.number}`);
+
+    // Nota de valores do SDR
+    const notaSdr = isSeniorSdr
+      ? sheet.addRow(['', '  +1 ano: R$120 (1–5) | R$150 (6–10) | R$180 (11+)'])
+      : sheet.addRow(['', '  <1 ano: R$100 por fechamento (flat)']);
+    notaSdr.getCell(2).font = { italic: true, size: 9, color: { argb: 'FF555555' } };
+    notaSdr.height = 13;
 
     // Header das colunas
     const hRow = sheet.addRow(['DATA FECHAMENTO', 'EMPRESA', 'PRODUTO / SERVIÇO', 'VALOR', 'LINK AGENDOR']);
@@ -265,22 +316,15 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
     const primeiraLinha = sheet.rowCount + 1;
 
     deals.forEach((d, idx) => {
-      const posicao   = idx + 1;                                    // 1-based
-      const valorUnit = valorUnitPorPosicao(posicao);              // para resultado pré-calculado
+      const posicao   = idx + 1;
+      const valorUnit = valorUnitPorPosicao(posicao, isSeniorSdr);
       const link      = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-
-      // Fórmula: posição = ROW() - primeiraLinha + 1
-      // =IF(posição<=5, 120, IF(posição<=10, 150, 180))
-      const linhaAtual = primeiraLinha + idx;
-      const formulaPos = `ROW()-${primeiraLinha}+1`;
+      const fmla      = formulaValorFechamento(primeiraLinha, isSeniorSdr);
 
       const row = sheet.addRow([d.data, d.empresa, d.produto, null, link]);
-      row.getCell(4).value = {
-        formula: `=IF(${formulaPos}<=5,120,IF(${formulaPos}<=10,150,180))`,
-        result:  valorUnit,
-      };
+      row.getCell(4).value = { formula: fmla.formula, result: valorUnit };
 
-      const bg = corFaixaFechamento(posicao);
+      const bg = corFaixaFechamento(posicao, isSeniorSdr);
       row.eachCell(cell => {
         cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
         cell.alignment = { vertical: 'middle' };
@@ -294,7 +338,7 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
 
     const ultimaLinha = sheet.rowCount;
 
-    // Linha de total com SUM
+    // Total com SUM
     const totRow = sheet.addRow(['', `TOTAL: ${total} fechamento(s)`, '', null, '']);
     totRow.getCell(4).value = {
       formula: `=SUM(D${primeiraLinha}:D${ultimaLinha})`,
@@ -405,14 +449,15 @@ async function main() {
       const key = `${r.sdr}:${r.orgId}`;
       r.tipo = (r.dataAgendamento.getTime() === primeiraOcorrencia.get(key)) ? 'NOVA' : 'FUP';
     }
-    r.valor = r.tipo === 'NOVA' ? VALOR_NOVA : VALOR_FUP;
+    r.valor = calcularValorReuniao(r.tipo, r.modalidade, SENIOR_SDRS.has(r.sdr));
   }
 
   // ── 4. Ler negócios fechados ───────────────────────────────────────────────
   console.log('\nLendo negócios fechados...');
   const negociosPorSdr = await lerNegociosFechados();
   for (const [sdr, deals] of Object.entries(negociosPorSdr)) {
-    console.log(`  ${sdr}: ${deals.length} fechamento(s) → R$ ${comissaoFechamento(deals.length).toFixed(2).replace('.',',')} (blocos R$120/150/180)`);
+    const isSr = SENIOR_SDRS.has(sdr);
+  console.log(`  ${sdr} (${isSr?'sênior':'júnior'}): ${deals.length} fechamento(s) → R$ ${comissaoFechamento(deals.length, isSr).toFixed(2).replace('.',',')}`);
   }
 
   // ── 5. Gerar Excel ────────────────────────────────────────────────────────
@@ -430,9 +475,10 @@ async function main() {
   for (const [sdr, d] of Object.entries(comissoesFechamentos)) summaryDeals[sdr] = d;
 
   // ── Aba Igor Vasconcelos (dedicada) ──────────────────────────────────────
-  const ivDeals  = negociosPorSdr['Igor Vasconcelos'] || [];
-  const ivTot    = ivDeals.length;
-  const ivComiss = comissaoFechamento(ivTot);
+  const ivDeals    = negociosPorSdr['Igor Vasconcelos'] || [];
+  const ivTot      = ivDeals.length;
+  const ivSenior   = SENIOR_SDRS.has('Igor Vasconcelos'); // false — júnior
+  const ivComiss   = comissaoFechamento(ivTot, ivSenior);
   const ivSheet  = outWb.addWorksheet('Igor Vasconcelos');
 
   ivSheet.mergeCells('A1:E1');
@@ -459,15 +505,12 @@ async function main() {
   const ivPrimeiraLinha = ivSheet.rowCount + 1;
   ivDeals.forEach((d, idx) => {
     const posicao   = idx + 1;
-    const valorUnit = valorUnitPorPosicao(posicao);
+    const valorUnit = valorUnitPorPosicao(posicao, ivSenior);
     const link      = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-    const formulaPos = `ROW()-${ivPrimeiraLinha}+1`;
+    const fmla      = formulaValorFechamento(ivPrimeiraLinha, ivSenior);
     const row = ivSheet.addRow([d.data, d.empresa, d.produto, null, link]);
-    row.getCell(4).value = {
-      formula: `=IF(${formulaPos}<=5,120,IF(${formulaPos}<=10,150,180))`,
-      result:  valorUnit,
-    };
-    const bg = corFaixaFechamento(posicao);
+    row.getCell(4).value = { formula: fmla.formula, result: valorUnit };
+    const bg = corFaixaFechamento(posicao, ivSenior);
     row.eachCell(cell => {
       cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
       cell.alignment = { vertical: 'middle' };
@@ -497,17 +540,26 @@ async function main() {
       .filter(r => r.sdr === sdrName)
       .sort((a, b) => a.dataAgendamento - b.dataAgendamento);
 
-    const sheet = outWb.addWorksheet(sdrName);
-    const equipe = EQUIPE_GABRIEL.includes(sdrName) ? 'Equipe Gabriel' : 'Equipe Paola';
+    const isSenior = SENIOR_SDRS.has(sdrName);
+    const sheet    = outWb.addWorksheet(sdrName);
+    const equipe   = EQUIPE_GABRIEL.includes(sdrName) ? 'Equipe Gabriel' : 'Equipe Paola';
+    const nivel    = isSenior ? '+1 ano' : '<1 ano';
 
     sheet.mergeCells('A1:G1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe}) — 21/05 → 19/06/2026`;
+    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/05 → 19/06/2026`;
     titleCell.font      = { bold: true, size: 11, color: { argb: BRANCO }, name: 'Arial Narrow' };
     titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(1).height = 28;
+
+    // Linha de tabela de valores do SDR
     sheet.addRow([]);
+    const tabelaRow = isSenior
+      ? sheet.addRow(['', 'NOVA VC: R$10 | NOVA Presencial: R$25 | FUP VC: R$5 | FUP Presencial: R$10'])
+      : sheet.addRow(['', 'NOVA VC: R$7,50 | NOVA Presencial: R$15 | FUP VC: R$5 | FUP Presencial: R$7,50']);
+    tabelaRow.getCell(2).font = { italic: true, size: 9, color: { argb: 'FF1B2A4A' }, bold: true };
+    tabelaRow.height = 13;
 
     const headerRow = sheet.addRow(['DATA', 'EMPRESA', 'ÁREA', 'TIPO', 'MODALIDADE', 'VALOR', 'LINK AGENDOR']);
     aplicarEstiloHeader(headerRow);
@@ -517,30 +569,38 @@ async function main() {
     sheet.getColumn(5).width = 20; sheet.getColumn(6).width = 14;
     sheet.getColumn(7).width = 50;
 
-    const notaRow = sheet.addRow(['', '⚡ Altere TIPO (NOVA/FUP) → VALOR atualiza automaticamente']);
+    const notaRow = sheet.addRow(['', '⚡ Altere TIPO e MODALIDADE → VALOR recalcula automaticamente']);
     notaRow.getCell(2).font = { italic: true, size: 9, color: { argb: 'FF555555' } };
-    notaRow.height = 14;
+    notaRow.height = 13;
 
-    const PRIMEIRA_LINHA = 5;
+    const PRIMEIRA_LINHA = 6; // título(1) + branco(2) + tabela(3) + header(4) + nota(5) → dados a partir de 6
     let totalNovas = 0, totalFups = 0, totalValor = 0, linhaAtual = PRIMEIRA_LINHA;
 
     for (const r of sdrReunioes) {
       const link = r.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${r.orgId}` : '';
       const row  = sheet.addRow([r.dataFormatada, r.empresa, r.area, r.tipo, r.modalidade, null, link]);
 
+      // Fórmula VALOR: considera TIPO (col D) + MODALIDADE (col E) + nível do SDR
       row.getCell(COL.VALOR).value = {
-        formula: `=IF(${LETRA[COL.TIPO]}${linhaAtual}="NOVA",7.5,IF(${LETRA[COL.TIPO]}${linhaAtual}="FUP",5,0))`,
-        result: r.valor,
+        formula: formulaValorReuniao(LETRA[COL.TIPO], LETRA[COL.MODAL], linhaAtual, isSenior),
+        result:  r.valor,
       };
+
+      // Dropdown TIPO
       row.getCell(COL.TIPO).dataValidation = {
         type: 'list', allowBlank: false, showDropDown: false, formulae: ['"NOVA,FUP"'],
+      };
+      // Dropdown MODALIDADE
+      row.getCell(COL.MODAL).dataValidation = {
+        type: 'list', allowBlank: false, showDropDown: false,
+        formulae: ['"VIDEO CONFERÊNCIA,PRESENCIAL"'],
       };
 
       const bg = r.tipo === 'NOVA' ? COR_NOVA : COR_FUP;
       row.eachCell(cell => {
-        cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
         cell.alignment = { vertical: 'middle' };
-        cell.border = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
+        cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
       });
       row.getCell(COL.TIPO).alignment  = { horizontal: 'center', vertical: 'middle' };
       row.getCell(COL.MODAL).alignment = { horizontal: 'center', vertical: 'middle' };
@@ -559,8 +619,8 @@ async function main() {
     totalRow.getCell(COL.VALOR).value = {
       formula: `=SUM(F${PRIMEIRA_LINHA}:F${linhaAtual - 1})`, result: totalValor,
     };
-    totalRow.getCell(COL.EMPRESA).font = { bold: true, name: 'Arial Narrow' };
-    totalRow.getCell(COL.TIPO).font    = { bold: true, name: 'Arial Narrow' };
+    totalRow.getCell(COL.EMPRESA).font   = { bold: true, name: 'Arial Narrow' };
+    totalRow.getCell(COL.TIPO).font      = { bold: true, name: 'Arial Narrow' };
     totalRow.getCell(COL.TIPO).alignment = { horizontal: 'center' };
     totalRow.getCell(COL.VALOR).numFmt   = 'R$ #,##0.00';
     totalRow.getCell(COL.VALOR).font     = { bold: true };
@@ -640,11 +700,21 @@ async function main() {
   capa.addRow([]); capa.addRow([]);
   const legHdr = capa.addRow(['', 'TABELA DE VALORES']);
   legHdr.getCell(2).font = { bold: true, name: 'Arial Narrow' };
-  capa.addRow(['', 'REUNIÕES — NOVA', '', '', '', 'R$ 7,50']);
-  capa.addRow(['', 'REUNIÕES — FUP',  '', '', '', 'R$ 5,00']);
-  capa.addRow(['', 'NEGÓCIOS FECHADOS — 1 a 4',   '', '', '', 'R$ 125,00/cada']);
-  capa.addRow(['', 'NEGÓCIOS FECHADOS — 5 a 9',   '', '', '', 'R$ 150,00/cada']);
-  capa.addRow(['', 'NEGÓCIOS FECHADOS — 10 ou +', '', '', '', 'R$ 250,00/cada']);
+  capa.addRow(['', '── JÚNIOR (<1 ano) ──────────────────────────']);
+  capa.addRow(['', 'REUNIÃO NOVA  VC', '', '', '', 'R$ 7,50']);
+  capa.addRow(['', 'REUNIÃO NOVA  Presencial', '', '', '', 'R$ 15,00']);
+  capa.addRow(['', 'REUNIÃO FUP   VC', '', '', '', 'R$ 5,00']);
+  capa.addRow(['', 'REUNIÃO FUP   Presencial', '', '', '', 'R$ 7,50']);
+  capa.addRow(['', 'FECHAMENTO (flat)', '', '', '', 'R$ 100,00']);
+  capa.addRow(['', '── SÊNIOR (+1 ano) ─────────────────────────']);
+  capa.addRow(['', 'REUNIÃO NOVA  VC', '', '', '', 'R$ 10,00']);
+  capa.addRow(['', 'REUNIÃO NOVA  Presencial', '', '', '', 'R$ 25,00']);
+  capa.addRow(['', 'REUNIÃO FUP   VC', '', '', '', 'R$ 5,00']);
+  capa.addRow(['', 'REUNIÃO FUP   Presencial', '', '', '', 'R$ 10,00']);
+  capa.addRow(['', 'FECHAMENTO 1–5', '', '', '', 'R$ 120,00/cada']);
+  capa.addRow(['', 'FECHAMENTO 6–10', '', '', '', 'R$ 150,00/cada']);
+  capa.addRow(['', 'FECHAMENTO 11+', '', '', '', 'R$ 180,00/cada']);
+  capa.addRow(['', 'SDRs sênior (+1 ano): Gabriel, Ana Beatriz, Leticia']);
 
   // Larguras da capa
   capa.getColumn(1).width  = 3;
