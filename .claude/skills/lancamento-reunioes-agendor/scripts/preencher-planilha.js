@@ -66,22 +66,28 @@ async function main() {
 
     row.getCell(2).value = dados.empresa;
 
-    // Se não tem dados enriquecidos (empresa não localizada no Agendor), só grava o nome.
-    if (!dados.data) {
+    // Empresa não localizada no Agendor (nem organização, nem tarefa): só grava o nome.
+    if (!dados.data && !dados.cnpj && !dados.segmento && !dados.cidade && !dados.estado) {
       row.commit();
       continue;
     }
 
-    row.getCell(1).value = parseDataBr(dados.data);
-    row.getCell(1).numFmt = "dd/mm/yyyy";
+    // Organização localizada no Agendor mas sem tarefa de Reunião no período: grava os
+    // dados cadastrais da empresa e deixa os campos da reunião (data, responsável, cargo,
+    // SDR, consultor) em branco em vez de "Não informado" — não houve reunião pra descrever.
     row.getCell(3).value = dados.segmento || "Não localizado";
     row.getCell(4).value = cnpjFmt(dados.cnpj);
-    row.getCell(5).value = dados.responsavel || "Não informado";
-    row.getCell(6).value = dados.cargo || "Não informado";
     row.getCell(7).value = dados.cidade || "Não localizado";
     row.getCell(8).value = dados.estado || "Não localizado";
-    row.getCell(9).value = dados.sdr || "Não informado";
-    row.getCell(10).value = dados.consultor || "Não informado";
+
+    if (dados.data) {
+      row.getCell(1).value = parseDataBr(dados.data);
+      row.getCell(1).numFmt = "dd/mm/yyyy";
+      row.getCell(5).value = dados.responsavel || "Não informado";
+      row.getCell(6).value = dados.cargo || "Não informado";
+      row.getCell(9).value = dados.sdr || "Não informado";
+      row.getCell(10).value = dados.consultor || "Não informado";
+    }
     row.commit();
   }
 
