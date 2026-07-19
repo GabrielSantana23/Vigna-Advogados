@@ -60,8 +60,8 @@ const SDR_ORDER        = [...EQUIPE_GABRIEL, ...EQUIPE_PAOLA];
 const NEGOCIOS_ORDER   = ['Gabriel', 'Michelle', 'Kailany', 'Ana Beatriz', 'Lawanny', 'Igor Vasconcelos'];
 
 // ─── Período ──────────────────────────────────────────────────────────────────
-const INICIO = new Date('2026-05-21T00:00:00.000Z');
-const FIM    = new Date('2026-06-20T02:59:59.000Z');
+const INICIO = new Date('2026-06-22T00:00:00.000Z');
+const FIM    = new Date('2026-07-18T02:59:59.000Z');
 
 // ─── Senioridade ──────────────────────────────────────────────────────────────
 // SDRs com +1 ano de casa (tabela de valores diferenciada)
@@ -195,7 +195,7 @@ const LETRA = { 1:'A', 2:'B', 3:'C', 4:'D', 5:'E', 6:'F', 7:'G' };
 // ─── Ler negócios fechados ────────────────────────────────────────────────────
 async function lerNegociosFechados() {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/Negócios fechados - MAIO - JUNHO.xlsx');
+  await wb.xlsx.readFile('dados/Negocios ganho junho - julho.xlsx');
   const ws = wb.worksheets[0];
 
   const hdrMap = {};
@@ -368,11 +368,11 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 21/05 → 19/06/2026 ===\n');
+  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 22/06 → 17/07/2026 ===\n');
 
   // ── 1. Reuniões: ler planilha ──────────────────────────────────────────────
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/Reuniões realizada do dia 21 maio ate 19 junho.xlsx');
+  await wb.xlsx.readFile('dados/Reunião realizadas junho - julho.xlsx');
   const wsSource = wb.worksheets[0];
 
   const hdrMap = {};
@@ -421,7 +421,7 @@ async function main() {
 
   // ── 2. Histórico Agendor (NOVA vs FUP) ────────────────────────────────────
   console.log('\nBuscando histórico de visitas (fev–mai/2026)...');
-  const lotes = [['2026-02-21','2026-03-21'],['2026-03-21','2026-04-21'],['2026-04-21','2026-05-21']];
+  const lotes = [['2026-03-22','2026-04-22'],['2026-04-22','2026-05-22'],['2026-05-22','2026-06-22']];
   const orgsComHistorico = new Set();
   for (const [gt, lt] of lotes) {
     process.stdout.write(`  ${gt} → ${lt}...`);
@@ -547,7 +547,7 @@ async function main() {
 
     sheet.mergeCells('A1:G1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/05 → 19/06/2026`;
+    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 22/06 → 17/07/2026`;
     titleCell.font      = { bold: true, size: 11, color: { argb: BRANCO }, name: 'Arial Narrow' };
     titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -632,7 +632,7 @@ async function main() {
   // ── Resumo (Capa) ─────────────────────────────────────────────────────────
   capa.mergeCells('B2:J2');
   const capaTitle = capa.getCell('B2');
-  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 21/05 → 19/06/2026';
+  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 22/06 → 17/07/2026';
   capaTitle.font      = { bold: true, size: 14, color: { argb: BRANCO }, name: 'Arial Narrow' };
   capaTitle.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
   capaTitle.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -731,7 +731,7 @@ async function main() {
   // ── Salvar ────────────────────────────────────────────────────────────────
   const outDir  = path.join('relatorios', 'premiacao');
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, 'Premiacao_SDR_MAIO_JUNHO_2026.xlsx');
+  const outPath = path.join(outDir, 'Premiacao_SDR_JUNHO_JULHO_2026.xlsx');
   await outWb.xlsx.writeFile(outPath);
 
   console.log(`\n✓ Arquivo gerado: ${outPath}`);
