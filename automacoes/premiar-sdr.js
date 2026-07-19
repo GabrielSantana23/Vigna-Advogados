@@ -46,18 +46,24 @@ const SDR_MAP = {
 
 // ─── SDR Map — Negócios Fechados ─────────────────────────────────────────────
 const NEGOCIOS_SDR_MAP = {
-  'Gabriel Santana Barra - Matriz SP':       'Gabriel',
-  'Michelle Valente Araujo - Matriz SP':     'Michelle',
-  'Kailany Santos da Silva - Matriz SP':     'Kailany',
-  'Ana Beatriz Soares Silva - Filial Alpha': 'Ana Beatriz',
-  'Lawanny Souza Brasil Luz - Filial Alpha': 'Lawanny',
-  'Igor Vasconcelos - Matriz SP':            'Igor Vasconcelos',
+  'Gabriel Santana Barra - Matriz SP':         'Gabriel',
+  'Michelle Valente Araujo - Matriz SP':        'Michelle',
+  'Kailany Santos da Silva - Matriz SP':        'Kailany',
+  'Ana Karolayne - Matriz SP':                  'Ana Karolayne',
+  'Igor Souza Ferreira - Matriz SP':            'Igor',
+  'Larissa Santos - Filial Porto Alegre':       'Larissa',
+  'Ana Belle - Filial PR':                      'Ana Belle',
+  'Leticia Pereira Mascarin - Filial Campinas': 'Leticia',
+  'Ana Beatriz Soares Silva - Filial Alpha':    'Ana Beatriz',
+  'Lawanny Souza Brasil Luz - Filial Alpha':    'Lawanny',
+  'Railanne Rosario do Carmo - Filial Alpha':   'Railanne',
+  'Igor Vasconcelos - Matriz SP':               'Igor Vasconcelos',
 };
 
 const EQUIPE_GABRIEL   = ['Gabriel', 'Michelle', 'Kailany', 'Ana Karolayne', 'Igor'];
 const EQUIPE_PAOLA     = ['Larissa', 'Ana Belle', 'Leticia', 'Ana Beatriz', 'Lawanny', 'Railanne'];
 const SDR_ORDER        = [...EQUIPE_GABRIEL, ...EQUIPE_PAOLA];
-const NEGOCIOS_ORDER   = ['Gabriel', 'Michelle', 'Kailany', 'Ana Beatriz', 'Lawanny', 'Igor Vasconcelos'];
+const NEGOCIOS_ORDER   = [...SDR_ORDER, 'Igor Vasconcelos'];
 
 // ─── Período ──────────────────────────────────────────────────────────────────
 const INICIO = new Date('2026-06-22T00:00:00.000Z');
