@@ -67,7 +67,7 @@ const NEGOCIOS_ORDER   = [...SDR_ORDER, 'Igor Vasconcelos'];
 
 // ─── Período ──────────────────────────────────────────────────────────────────
 const INICIO = new Date('2026-06-22T00:00:00.000Z');
-const FIM    = new Date('2026-07-18T02:59:59.000Z');
+const FIM    = new Date('2026-07-22T02:59:59.000Z');
 
 // ─── Senioridade ──────────────────────────────────────────────────────────────
 // SDRs com +1 ano de casa (tabela de valores diferenciada)
@@ -374,11 +374,11 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 22/06 → 17/07/2026 ===\n');
+  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 22/06 → 21/07/2026 ===\n');
 
   // ── 1. Reuniões: ler planilha ──────────────────────────────────────────────
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/Reunião realizadas junho - julho.xlsx');
+  await wb.xlsx.readFile('dados/Atividades - finalizadas - reunião.xlsx');
   const wsSource = wb.worksheets[0];
 
   const hdrMap = {};
@@ -737,7 +737,7 @@ async function main() {
   // ── Salvar ────────────────────────────────────────────────────────────────
   const outDir  = path.join('relatorios', 'premiacao');
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, 'Premiacao_SDR_JUNHO_JULHO_2026.xlsx');
+  const outPath = path.join(outDir, 'Premiacao_SDR_JUNHO_JULHO_2026_V2.xlsx');
   await outWb.xlsx.writeFile(outPath);
 
   console.log(`\n✓ Arquivo gerado: ${outPath}`);
