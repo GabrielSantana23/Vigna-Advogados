@@ -66,8 +66,8 @@ const SDR_ORDER        = [...EQUIPE_GABRIEL, ...EQUIPE_PAOLA];
 const NEGOCIOS_ORDER   = [...SDR_ORDER, 'Igor Vasconcelos'];
 
 // ─── Período ──────────────────────────────────────────────────────────────────
-const INICIO = new Date('2026-06-22T00:00:00.000Z');
-const FIM    = new Date('2026-07-22T02:59:59.000Z');
+const INICIO = new Date('2026-07-21T00:00:00.000Z');
+const FIM    = new Date('2026-08-21T02:59:59.000Z');
 
 // ─── Senioridade ──────────────────────────────────────────────────────────────
 // SDRs com +1 ano de casa (tabela de valores diferenciada)
@@ -201,7 +201,7 @@ const LETRA = { 1:'A', 2:'B', 3:'C', 4:'D', 5:'E', 6:'F', 7:'G' };
 // ─── Ler negócios fechados ────────────────────────────────────────────────────
 async function lerNegociosFechados() {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/Negocios ganho junho - julho.xlsx');
+  await wb.xlsx.readFile('dados/11829-negocios-2026-08-20-15-15-46.xlsx');
   const ws = wb.worksheets[0];
 
   const hdrMap = {};
@@ -257,7 +257,7 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
   // Título
   sheet.mergeCells('A1:E1');
   const tc = sheet.getCell('A1');
-  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — MAIO/JUNHO 2026';
+  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — 21/07 → 20/08/2026';
   tc.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
   tc.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
   tc.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -374,11 +374,11 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 22/06 → 21/07/2026 ===\n');
+  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 21/07 → 20/08/2026 ===\n');
 
   // ── 1. Reuniões: ler planilha ──────────────────────────────────────────────
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/Atividades - finalizadas - reunião.xlsx');
+  await wb.xlsx.readFile('dados/reuniçao realizada - julh - agosto.xlsx');
   const wsSource = wb.worksheets[0];
 
   const hdrMap = {};
@@ -426,8 +426,8 @@ async function main() {
   console.log(`Reuniões no período: ${reunioes.length} (${SDR_ORDER.length} SDRs)`);
 
   // ── 2. Histórico Agendor (NOVA vs FUP) ────────────────────────────────────
-  console.log('\nBuscando histórico de visitas (fev–mai/2026)...');
-  const lotes = [['2026-03-22','2026-04-22'],['2026-04-22','2026-05-22'],['2026-05-22','2026-06-22']];
+  console.log('\nBuscando histórico de visitas (abr–jul/2026)...');
+  const lotes = [['2026-04-21','2026-05-21'],['2026-05-21','2026-06-21'],['2026-06-21','2026-07-21']];
   const orgsComHistorico = new Set();
   for (const [gt, lt] of lotes) {
     process.stdout.write(`  ${gt} → ${lt}...`);
@@ -489,7 +489,7 @@ async function main() {
 
   ivSheet.mergeCells('A1:E1');
   const ivTitle = ivSheet.getCell('A1');
-  ivTitle.value     = 'IGOR VASCONCELOS — NEGÓCIOS FECHADOS — MAIO/JUNHO 2026';
+  ivTitle.value     = 'IGOR VASCONCELOS — NEGÓCIOS FECHADOS — 21/07 → 20/08/2026';
   ivTitle.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
   ivTitle.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_DEALS } };
   ivTitle.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -553,7 +553,7 @@ async function main() {
 
     sheet.mergeCells('A1:G1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 22/06 → 17/07/2026`;
+    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/07 → 20/08/2026`;
     titleCell.font      = { bold: true, size: 11, color: { argb: BRANCO }, name: 'Arial Narrow' };
     titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -638,7 +638,7 @@ async function main() {
   // ── Resumo (Capa) ─────────────────────────────────────────────────────────
   capa.mergeCells('B2:J2');
   const capaTitle = capa.getCell('B2');
-  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 22/06 → 17/07/2026';
+  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 21/07 → 20/08/2026';
   capaTitle.font      = { bold: true, size: 14, color: { argb: BRANCO }, name: 'Arial Narrow' };
   capaTitle.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
   capaTitle.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -737,7 +737,7 @@ async function main() {
   // ── Salvar ────────────────────────────────────────────────────────────────
   const outDir  = path.join('relatorios', 'premiacao');
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, 'Premiacao_SDR_JUNHO_JULHO_2026_V2.xlsx');
+  const outPath = path.join(outDir, 'Premiacao_SDR_JULHO_AGOSTO_2026.xlsx');
   await outWb.xlsx.writeFile(outPath);
 
   console.log(`\n✓ Arquivo gerado: ${outPath}`);
