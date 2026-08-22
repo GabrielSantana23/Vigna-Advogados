@@ -51,6 +51,24 @@ async function main() {
 
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(planilhaPath);
+
+  // Bug do ExcelJS: tabelas do Excel sem <tableStyleInfo> no XML original (comum em
+  // arquivos exportados/editados por outras ferramentas) quebram a regravação porque
+  // o model.style fica undefined. Preenche um estilo padrão antes de salvar.
+  for (const worksheet of wb.worksheets) {
+    for (const table of Object.values(worksheet.tables)) {
+      if (!table.model.style) {
+        table.model.style = {
+          theme: "TableStyleMedium2",
+          showFirstColumn: false,
+          showLastColumn: false,
+          showRowStripes: false,
+          showColumnStripes: false,
+        };
+      }
+    }
+  }
+
   const ws = wb.getWorksheet("Lançamento_Reuniões");
   if (!ws) throw new Error("Aba 'Lançamento_Reuniões' não encontrada na planilha.");
 
