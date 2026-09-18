@@ -2,7 +2,7 @@
 
 **Unidade:** Matriz SP
 **Na equipe desde:** agosto/2025 (cerca de 10 meses de casa — a mais experiente do time)
-**Status:** Ativo
+**Status:** Desligada (confirmado em 18/09/2026)
 **Meta mensal:** 60 reuniões agendadas / 32 realizadas
 
 ## Perfil

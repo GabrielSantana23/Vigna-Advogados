@@ -9,7 +9,7 @@ Workspace de trabalho do Gabriel na área de Pré-vendas do Grupo Vigna. Aqui fi
 - `comercial/propostas/` — propostas comerciais em andamento e enviadas
 - `comercial/emails/` — modelos de e-mails comerciais e e-mails padrão
 - `comercial/cadencias/` — scripts e fluxos de cadência do time de SDRs
-- `equipe/sdrs/` — materiais e acompanhamento do time (Igor, Kailainy, Ana Karolayne, Michelle): `time-geral.md` (visão geral e ranking) + um arquivo por pessoa com perfil de gestão e desempenho mensal, alimentado por `dados/Numeros time - geral.xlsx`
+- `equipe/sdrs/` — materiais e acompanhamento do time (ativa hoje: Kailainy; Igor, Ana Karolayne e Michelle desligados em 18/09/2026): `time-geral.md` (visão geral e ranking) + um arquivo por pessoa com perfil de gestão e desempenho mensal, alimentado por `dados/Numeros time - geral.xlsx`
 - `equipe/treinamentos/` — conteúdo de treinamento e desenvolvimento do time
 - `relatorios/` — relatórios mensais e dashboards de desempenho, além das saídas diárias geradas por skills (`relatorios/quadro-visitas/`, `relatorios/briefing-reunioes/`, `relatorios/premiacao/`)
 - `automacoes/` — automações de processos internos (foco atual)
@@ -38,7 +38,7 @@ O Grupo Vigna é um ecossistema jurídico e empresarial com mais de 20 anos de m
 
 Atende leads e clientes externos das quatro empresas do grupo (com abordagem cross-sell — um mesmo lead pode ser trabalhado pra mais de uma empresa) e produz comunicações e documentos internos pra equipe e diretoria.
 
-**Equipe:** Gabriel lidera 4 SDRs — Igor Souza, Kailainy, Ana Karolayne e Michelle — e reporta à Dra. Pamela Pedro (Diretora Comercial).
+**Equipe:** Gabriel lidera a SDR Kailainy (Igor Souza, Ana Karolayne e Michelle foram desligados, confirmado em 18/09/2026) — e reporta à Dra. Pamela Pedro (Diretora Comercial).
 
 ## Tom de voz
 

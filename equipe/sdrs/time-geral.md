@@ -8,10 +8,12 @@
 
 | SDR | Na equipe desde | Tempo de casa | Status |
 |---|---|---|---|
-| Ana Karolayne | agosto/2025 | ~10 meses | Ativo |
-| Michelle | outubro/2025 | ~8 meses | Ativo |
 | Kailainy | novembro/2025 | ~7 meses | Ativo |
-| Igor Souza | fevereiro/2026 | ~4 meses | Ativo |
+| Ana Karolayne | agosto/2025 | ~10 meses | Desligada (confirmado 18/09/2026) |
+| Michelle | outubro/2025 | ~8 meses | Desligada (confirmado 18/09/2026) |
+| Igor Souza | fevereiro/2026 | ~4 meses | Desligado (confirmado 18/09/2026) |
+
+Time reduzido a partir de setembro/2026 — hoje só Kailainy segue ativa na equipe do Gabriel.
 
 ## Desempenho consolidado (jan-mai/2026)
 
