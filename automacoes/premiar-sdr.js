@@ -14,7 +14,7 @@
 //   Reunião FUP   VC        = R$  5,00 | FUP   Presencial = R$ 10,00
 //   Fechamento               = R$120 (1–5) / R$150 (6–10) / R$180 (11+)
 //
-// SDRs sênior (+1 ano): Gabriel, Ana Beatriz, Leticia
+// SDRs sênior (+1 ano): Gabriel
 
 const ExcelJS = require('exceljs');
 const path    = require('path');
@@ -60,18 +60,20 @@ const NEGOCIOS_SDR_MAP = {
   'Igor Vasconcelos - Matriz SP':               'Igor Vasconcelos',
 };
 
-const EQUIPE_GABRIEL   = ['Gabriel', 'Michelle', 'Kailany', 'Ana Karolayne', 'Igor'];
-const EQUIPE_PAOLA     = ['Larissa', 'Ana Belle', 'Leticia', 'Ana Beatriz', 'Lawanny', 'Railanne'];
+// Michelle, Ana Karolayne, Igor Souza Ferreira, Ana Belle, Ana Beatriz, Leticia,
+// Railanne e Igor Vasconcelos não fazem mais parte do time (confirmado em 18/09/2026).
+const EQUIPE_GABRIEL   = ['Gabriel', 'Kailany'];
+const EQUIPE_PAOLA     = ['Larissa', 'Lawanny'];
 const SDR_ORDER        = [...EQUIPE_GABRIEL, ...EQUIPE_PAOLA];
-const NEGOCIOS_ORDER   = [...SDR_ORDER, 'Igor Vasconcelos'];
+const NEGOCIOS_ORDER   = [...SDR_ORDER];
 
 // ─── Período ──────────────────────────────────────────────────────────────────
-const INICIO = new Date('2026-07-21T00:00:00.000Z');
-const FIM    = new Date('2026-08-21T02:59:59.000Z');
+const INICIO = new Date('2026-08-21T00:00:00.000Z');
+const FIM    = new Date('2026-09-19T02:59:59.000Z'); // 18/09 23:59 BRT = +3h UTC
 
 // ─── Senioridade ──────────────────────────────────────────────────────────────
 // SDRs com +1 ano de casa (tabela de valores diferenciada)
-const SENIOR_SDRS = new Set(['Gabriel', 'Ana Beatriz', 'Leticia']);
+const SENIOR_SDRS = new Set(['Gabriel']);
 
 // ─── Tabelas de valores por reunião ──────────────────────────────────────────
 const RATES = {
@@ -201,7 +203,7 @@ const LETRA = { 1:'A', 2:'B', 3:'C', 4:'D', 5:'E', 6:'F', 7:'G' };
 // ─── Ler negócios fechados ────────────────────────────────────────────────────
 async function lerNegociosFechados() {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/11829-negocios-2026-08-20-15-15-46.xlsx');
+  await wb.xlsx.readFile('dados/negocios ganhos agosto e setembro.xlsx');
   const ws = wb.worksheets[0];
 
   const hdrMap = {};
@@ -257,7 +259,7 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
   // Título
   sheet.mergeCells('A1:E1');
   const tc = sheet.getCell('A1');
-  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — 21/07 → 20/08/2026';
+  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — 21/08 → 18/09/2026';
   tc.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
   tc.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
   tc.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -374,60 +376,69 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 21/07 → 20/08/2026 ===\n');
+  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 21/08 → 18/09/2026 ===\n');
 
-  // ── 1. Reuniões: ler planilha ──────────────────────────────────────────────
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/reuniçao realizada - julh - agosto.xlsx');
-  const wsSource = wb.worksheets[0];
-
-  const hdrMap = {};
-  wsSource.getRow(1).eachCell((cell, col) => { hdrMap[cell.value] = col; });
-  const C = {
-    usuario:       hdrMap['Usuário que realizou a tarefa'],
-    empresa:       hdrMap['Empresa relacionada'],
-    codigoEmpresa: hdrMap['Código da Empresa'],
-    negocio:       hdrMap['Negócio relacionado'],
-    dataAgend:     hdrMap['Data de agendamento'],
-    descricao:     hdrMap['Descrição'],
-  };
+  // ── 1. Reuniões: ler planilhas (uma por SDR nesse export) ─────────────────
+  const ARQUIVOS_REUNIOES = [
+    'dados/controle de reuniões dia 21 - 19 setembro.xlsx',
+    'dados/controle de reuniões dia 21 - 19 setembro Kai.xlsx',
+    'dados/controle de reuniões dia 21 - 19 setembro Lawanny.xlsx',
+    'dados/controle de reuniões dia 21 - 19 setembro Larissa.xlsx',
+  ];
 
   const reunioes  = [];
   const excluidos = [];
 
-  wsSource.eachRow((row, rowNum) => {
-    if (rowNum === 1) return;
-    const usuario = row.getCell(C.usuario).value;
-    const sdr     = SDR_MAP[usuario];
-    if (!sdr) return;
+  for (const arquivo of ARQUIVOS_REUNIOES) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(arquivo);
+    const wsSource = wb.worksheets[0];
 
-    const dataRaw = row.getCell(C.dataAgend).value;
-    if (!dataRaw) return;
-    const dt = new Date(dataRaw);
+    const hdrMap = {};
+    wsSource.getRow(1).eachCell((cell, col) => { hdrMap[cell.value] = col; });
+    const C = {
+      usuario:       hdrMap['Usuário que realizou a tarefa'] || hdrMap['Usuário que finalizou'],
+      empresa:       hdrMap['Empresa relacionada'],
+      codigoEmpresa: hdrMap['Código da Empresa'],
+      negocio:       hdrMap['Negócio relacionado'],
+      dataAgend:     hdrMap['Data de agendamento'],
+      descricao:     hdrMap['Descrição'],
+    };
 
-    if (dt < INICIO || dt > FIM) {
-      excluidos.push({ rowNum, sdr, data: formatDate(dt), empresa: row.getCell(C.empresa).value || '(sem empresa)' });
-      return;
-    }
+    wsSource.eachRow((row, rowNum) => {
+      if (rowNum === 1) return;
+      const usuario = row.getCell(C.usuario).value;
+      const sdr     = SDR_MAP[usuario];
+      if (!sdr) return;
 
-    const orgId = row.getCell(C.codigoEmpresa).value;
-    reunioes.push({
-      rowNum, sdr,
-      orgId: orgId ? Number(orgId) : null,
-      empresa:       row.getCell(C.empresa).value || '',
-      area:          extrairArea(row.getCell(C.negocio).value),
-      dataAgendamento: dt,
-      dataFormatada:   formatDate(dt),
-      modalidade:      detectModalidade(row.getCell(C.descricao).value),
-      tipo: null, valor: null,
+      const dataRaw = row.getCell(C.dataAgend).value;
+      if (!dataRaw) return;
+      const dt = new Date(dataRaw);
+
+      if (dt < INICIO || dt > FIM) {
+        excluidos.push({ arquivo, rowNum, sdr, data: formatDate(dt), empresa: row.getCell(C.empresa).value || '(sem empresa)' });
+        return;
+      }
+
+      const orgId = row.getCell(C.codigoEmpresa).value;
+      reunioes.push({
+        rowNum, sdr,
+        orgId: orgId ? Number(orgId) : null,
+        empresa:       row.getCell(C.empresa).value || '',
+        area:          extrairArea(row.getCell(C.negocio).value),
+        dataAgendamento: dt,
+        dataFormatada:   formatDate(dt),
+        modalidade:      detectModalidade(row.getCell(C.descricao).value),
+        tipo: null, valor: null,
+      });
     });
-  });
+  }
 
   console.log(`Reuniões no período: ${reunioes.length} (${SDR_ORDER.length} SDRs)`);
 
   // ── 2. Histórico Agendor (NOVA vs FUP) ────────────────────────────────────
-  console.log('\nBuscando histórico de visitas (abr–jul/2026)...');
-  const lotes = [['2026-04-21','2026-05-21'],['2026-05-21','2026-06-21'],['2026-06-21','2026-07-21']];
+  console.log('\nBuscando histórico de visitas (mai–ago/2026)...');
+  const lotes = [['2026-05-21','2026-06-21'],['2026-06-21','2026-07-21'],['2026-07-21','2026-08-21']];
   const orgsComHistorico = new Set();
   for (const [gt, lt] of lotes) {
     process.stdout.write(`  ${gt} → ${lt}...`);
@@ -480,66 +491,6 @@ async function main() {
   );
   for (const [sdr, d] of Object.entries(comissoesFechamentos)) summaryDeals[sdr] = d;
 
-  // ── Aba Igor Vasconcelos (dedicada) ──────────────────────────────────────
-  const ivDeals    = negociosPorSdr['Igor Vasconcelos'] || [];
-  const ivTot      = ivDeals.length;
-  const ivSenior   = SENIOR_SDRS.has('Igor Vasconcelos'); // false — júnior
-  const ivComiss   = comissaoFechamento(ivTot, ivSenior);
-  const ivSheet  = outWb.addWorksheet('Igor Vasconcelos');
-
-  ivSheet.mergeCells('A1:E1');
-  const ivTitle = ivSheet.getCell('A1');
-  ivTitle.value     = 'IGOR VASCONCELOS — NEGÓCIOS FECHADOS — 21/07 → 20/08/2026';
-  ivTitle.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
-  ivTitle.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_DEALS } };
-  ivTitle.alignment = { horizontal: 'center', vertical: 'middle' };
-  ivSheet.getRow(1).height = 28;
-  ivSheet.addRow([]);
-  const ivLeg = ivSheet.addRow(['⬛ 1–5: R$120/cada', '⬛ 6–10: R$150/cada', '⬛ 11+: R$180/cada']);
-  ivLeg.getCell(1).font = { bold: true, size: 9, color: { argb: 'FF2E6B30' } };
-  ivLeg.getCell(2).font = { bold: true, size: 9, color: { argb: 'FF7A6000' } };
-  ivLeg.getCell(3).font = { bold: true, size: 9, color: { argb: 'FF8B3A00' } };
-  ivLeg.height = 14;
-  ivSheet.addRow([]);
-  ivSheet.getColumn(1).width = 14; ivSheet.getColumn(2).width = 40;
-  ivSheet.getColumn(3).width = 28; ivSheet.getColumn(4).width = 14;
-  ivSheet.getColumn(5).width = 50;
-
-  const ivHdr = ivSheet.addRow(['DATA FECHAMENTO', 'EMPRESA', 'PRODUTO / SERVIÇO', 'VALOR', 'LINK AGENDOR']);
-  aplicarEstiloHeader(ivHdr, COR_DEALS);
-
-  const ivPrimeiraLinha = ivSheet.rowCount + 1;
-  ivDeals.forEach((d, idx) => {
-    const posicao   = idx + 1;
-    const valorUnit = valorUnitPorPosicao(posicao, ivSenior);
-    const link      = d.orgId ? `https://beta.agendor.com.br/tasks?organizationId=${d.orgId}` : '';
-    const fmla      = formulaValorFechamento(ivPrimeiraLinha, ivSenior);
-    const row = ivSheet.addRow([d.data, d.empresa, d.produto, null, link]);
-    row.getCell(4).value = { formula: fmla.formula, result: valorUnit };
-    const bg = corFaixaFechamento(posicao, ivSenior);
-    row.eachCell(cell => {
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
-      cell.alignment = { vertical: 'middle' };
-      cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } } };
-    });
-    row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-    row.getCell(4).numFmt    = 'R$ #,##0.00';
-    row.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
-    row.height = 18;
-  });
-  const ivUltimaLinha = ivSheet.rowCount;
-
-  ivSheet.addRow([]);
-  const ivResRow = ivSheet.addRow(['', `TOTAL: ${ivTot} fechamento(s)`, '', null, '']);
-  ivResRow.getCell(4).value = {
-    formula: `=SUM(D${ivPrimeiraLinha}:D${ivUltimaLinha})`,
-    result:  ivComiss,
-  };
-  ivResRow.getCell(2).font      = { bold: true, name: 'Arial Narrow' };
-  ivResRow.getCell(4).numFmt    = 'R$ #,##0.00';
-  ivResRow.getCell(4).font      = { bold: true, name: 'Arial Narrow' };
-  ivResRow.getCell(4).alignment = { horizontal: 'right' };
-
   // ── Abas individuais de reuniões por SDR ─────────────────────────────────
   for (const sdrName of SDR_ORDER) {
     const sdrReunioes = reunioes
@@ -553,7 +504,7 @@ async function main() {
 
     sheet.mergeCells('A1:G1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/07 → 20/08/2026`;
+    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/08 → 18/09/2026`;
     titleCell.font      = { bold: true, size: 11, color: { argb: BRANCO }, name: 'Arial Narrow' };
     titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -638,7 +589,7 @@ async function main() {
   // ── Resumo (Capa) ─────────────────────────────────────────────────────────
   capa.mergeCells('B2:J2');
   const capaTitle = capa.getCell('B2');
-  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 21/07 → 20/08/2026';
+  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 21/08 → 18/09/2026';
   capaTitle.font      = { bold: true, size: 14, color: { argb: BRANCO }, name: 'Arial Narrow' };
   capaTitle.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
   capaTitle.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -685,16 +636,8 @@ async function main() {
   const bg = bloco(EQUIPE_GABRIEL, 'EQUIPE GABRIEL', COR_EQUIPE_G);
   const bp = bloco(EQUIPE_PAOLA,   'EQUIPE PAOLA',   COR_EQUIPE_P);
 
-  // Igor Vasconcelos (linha separada — só fechamentos)
-  const ivComissaoR = comissaoFechamento(ivTot);
-  const ivRow = capa.addRow(['', 'Igor Vasconcelos', '', '', '', 0, ivTot, '(blocos)', ivComissaoR, ivComissaoR]);
-  ivRow.getCell(2).font = { italic: true, name: 'Arial Narrow' };
-  [6, 8, 9, 10].forEach(i => { ivRow.getCell(i).numFmt = 'R$ #,##0.00'; ivRow.getCell(i).alignment = { horizontal: 'right' }; });
-  ivRow.getCell(7).alignment = { horizontal: 'center' };
-  capa.addRow([]);
-
   // Total Geral
-  const gtTotal = bg.totT + bp.totT + ivComissaoR;
+  const gtTotal = bg.totT + bp.totT;
   const gtRow   = capa.addRow(['', 'TOTAL GERAL', '', '', '', '', '', '', '', gtTotal]);
   gtRow.getCell(2).font = { bold: true, size: 12, name: 'Arial Narrow' };
   gtRow.getCell(10).numFmt = 'R$ #,##0.00';
@@ -720,7 +663,7 @@ async function main() {
   capa.addRow(['', 'FECHAMENTO 1–5', '', '', '', 'R$ 120,00/cada']);
   capa.addRow(['', 'FECHAMENTO 6–10', '', '', '', 'R$ 150,00/cada']);
   capa.addRow(['', 'FECHAMENTO 11+', '', '', '', 'R$ 180,00/cada']);
-  capa.addRow(['', 'SDRs sênior (+1 ano): Gabriel, Ana Beatriz, Leticia']);
+  capa.addRow(['', 'SDRs sênior (+1 ano): Gabriel']);
 
   // Larguras da capa
   capa.getColumn(1).width  = 3;
@@ -737,7 +680,7 @@ async function main() {
   // ── Salvar ────────────────────────────────────────────────────────────────
   const outDir  = path.join('relatorios', 'premiacao');
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, 'Premiacao_SDR_JULHO_AGOSTO_2026.xlsx');
+  const outPath = path.join(outDir, 'Premiacao_SDR_AGOSTO_SETEMBRO_2026.xlsx');
   await outWb.xlsx.writeFile(outPath);
 
   console.log(`\n✓ Arquivo gerado: ${outPath}`);
@@ -754,7 +697,6 @@ async function main() {
     const fd = summaryDeals[sdr] || { total:0, totalComissao:0 };
     console.log(`  ${sdr}: reuniões R$ ${m.valor.toFixed(2).replace('.',',')} + fechamentos R$ ${fd.totalComissao.toFixed(2).replace('.',',')} = R$ ${(m.valor+fd.totalComissao).toFixed(2).replace('.',',')}`);
   }
-  console.log(`  Igor Vasconcelos: fechamentos R$ ${ivComissaoR.toFixed(2).replace('.',',')} = R$ ${ivComissaoR.toFixed(2).replace('.',',')}`);
   console.log(`\nTOTAL GERAL: R$ ${gtTotal.toFixed(2).replace('.',',')}`);
   if (excluidos.length > 0) console.log(`\nObs.: ${excluidos.length} registro(s) excluído(s) por fora do período.`);
 }
