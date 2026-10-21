@@ -68,8 +68,8 @@ const SDR_ORDER        = [...EQUIPE_GABRIEL, ...EQUIPE_PAOLA];
 const NEGOCIOS_ORDER   = [...SDR_ORDER];
 
 // ─── Período ──────────────────────────────────────────────────────────────────
-const INICIO = new Date('2026-08-21T00:00:00.000Z');
-const FIM    = new Date('2026-09-19T02:59:59.000Z'); // 18/09 23:59 BRT = +3h UTC
+const INICIO = new Date('2026-09-21T00:00:00.000Z');
+const FIM    = new Date('2026-10-21T02:59:59.000Z'); // 20/10 23:59 BRT = +3h UTC
 
 // ─── Senioridade ──────────────────────────────────────────────────────────────
 // SDRs com +1 ano de casa (tabela de valores diferenciada)
@@ -203,7 +203,7 @@ const LETRA = { 1:'A', 2:'B', 3:'C', 4:'D', 5:'E', 6:'F', 7:'G' };
 // ─── Ler negócios fechados ────────────────────────────────────────────────────
 async function lerNegociosFechados() {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('dados/negocios ganhos agosto e setembro.xlsx');
+  await wb.xlsx.readFile('dados/Negocios fechados dia 21 de setembro e 20 de outubro.xlsx');
   const ws = wb.worksheets[0];
 
   const hdrMap = {};
@@ -222,15 +222,24 @@ async function lerNegociosFechados() {
   const negocios = [];
   ws.eachRow((row, rowNum) => {
     if (rowNum === 1) return;
-    const usuario = row.getCell(C.usuario).value;
-    const sdr     = NEGOCIOS_SDR_MAP[usuario];
-    if (!sdr) return; // ignorar usuários fora do mapa (ex: Victor Bernardes)
+    const usuario      = row.getCell(C.usuario).value;
+    const empresaNome  = row.getCell(C.empresa).value || '';
+    let   sdr          = NEGOCIOS_SDR_MAP[usuario];
+
+    // Tecflux: negócio era da Ana Beatriz (desligada em 18/09), mas a conta
+    // foi herdada pela Kailany — comissão deste fechamento vai para ela.
+    if (usuario === 'Ana Beatriz Soares Silva - Filial Alpha' && empresaNome.toString().toUpperCase().includes('TECFLUX')) {
+      sdr = 'Kailany';
+    }
+
+    if (!sdr) return; // ignorar usuários fora do mapa ou sem comissão no período (ex: Igor Vasconcelos)
+    if (sdr === 'Ana Beatriz' || sdr === 'Igor Vasconcelos') return; // fora do time ativo — sem aba nesta premiação
     if (row.getCell(C.status).value !== 'Ganho') return;
 
     const dataRaw = row.getCell(C.dataConcl).value;
     negocios.push({
       sdr,
-      empresa:    row.getCell(C.empresa).value || '',
+      empresa:    empresaNome,
       titulo:     row.getCell(C.titulo).value  || '',
       produto:    row.getCell(C.produto).value  || '',
       data:       dataRaw ? formatDate(dataRaw) : '',
@@ -259,7 +268,7 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
   // Título
   sheet.mergeCells('A1:E1');
   const tc = sheet.getCell('A1');
-  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — 21/08 → 18/09/2026';
+  tc.value     = 'NEGÓCIOS FECHADOS — GRUPO VIGNA — 21/09 → 20/10/2026';
   tc.font      = { bold: true, size: 12, color: { argb: BRANCO }, name: 'Arial Narrow' };
   tc.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: corCabecalho } };
   tc.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -376,14 +385,11 @@ function gerarAbaNegociosFechados(outWb, porSdr, sdrsParaMostrar, tituloAba, cor
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 21/08 → 18/09/2026 ===\n');
+  console.log('=== PREMIAÇÃO SDR — GRUPO VIGNA — 21/09 → 20/10/2026 ===\n');
 
-  // ── 1. Reuniões: ler planilhas (uma por SDR nesse export) ─────────────────
+  // ── 1. Reuniões: ler planilha (export único com todos os SDRs) ────────────
   const ARQUIVOS_REUNIOES = [
-    'dados/controle de reuniões dia 21 - 19 setembro.xlsx',
-    'dados/controle de reuniões dia 21 - 19 setembro Kai.xlsx',
-    'dados/controle de reuniões dia 21 - 19 setembro Lawanny.xlsx',
-    'dados/controle de reuniões dia 21 - 19 setembro Larissa.xlsx',
+    'dados/premiação reunião realizada 21 de setembro e 20 de outubro.xlsx',
   ];
 
   const reunioes  = [];
@@ -437,8 +443,8 @@ async function main() {
   console.log(`Reuniões no período: ${reunioes.length} (${SDR_ORDER.length} SDRs)`);
 
   // ── 2. Histórico Agendor (NOVA vs FUP) ────────────────────────────────────
-  console.log('\nBuscando histórico de visitas (mai–ago/2026)...');
-  const lotes = [['2026-05-21','2026-06-21'],['2026-06-21','2026-07-21'],['2026-07-21','2026-08-21']];
+  console.log('\nBuscando histórico de visitas (jun–set/2026)...');
+  const lotes = [['2026-06-21','2026-07-21'],['2026-07-21','2026-08-21'],['2026-08-21','2026-09-21']];
   const orgsComHistorico = new Set();
   for (const [gt, lt] of lotes) {
     process.stdout.write(`  ${gt} → ${lt}...`);
@@ -504,7 +510,7 @@ async function main() {
 
     sheet.mergeCells('A1:G1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/08 → 18/09/2026`;
+    titleCell.value     = `PREMIAÇÃO — ${sdrName.toUpperCase()} (${equipe} | ${nivel}) — 21/09 → 20/10/2026`;
     titleCell.font      = { bold: true, size: 11, color: { argb: BRANCO }, name: 'Arial Narrow' };
     titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -589,7 +595,7 @@ async function main() {
   // ── Resumo (Capa) ─────────────────────────────────────────────────────────
   capa.mergeCells('B2:J2');
   const capaTitle = capa.getCell('B2');
-  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 21/08 → 18/09/2026';
+  capaTitle.value     = 'PREMIAÇÃO SDR — GRUPO VIGNA — 21/09 → 20/10/2026';
   capaTitle.font      = { bold: true, size: 14, color: { argb: BRANCO }, name: 'Arial Narrow' };
   capaTitle.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: COR_HEADER } };
   capaTitle.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -680,7 +686,7 @@ async function main() {
   // ── Salvar ────────────────────────────────────────────────────────────────
   const outDir  = path.join('relatorios', 'premiacao');
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, 'Premiacao_SDR_AGOSTO_SETEMBRO_2026.xlsx');
+  const outPath = path.join(outDir, 'Premiacao_SDR_SETEMBRO_OUTUBRO_2026.xlsx');
   await outWb.xlsx.writeFile(outPath);
 
   console.log(`\n✓ Arquivo gerado: ${outPath}`);
